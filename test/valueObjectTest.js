@@ -10,16 +10,16 @@ describe(ValueObject.name, () => {
     it('sets its properties to the constructor arguments', () => {
       class Positional extends ValueObject.define('first', 'second') {}
 
-      const struct = new Positional('a', 'b')
-      assert.equal(struct.first, 'a')
-      assert.equal(struct.second, 'b')
+      const positional = new Positional('a', 'b')
+      assert.equal(positional.first, 'a')
+      assert.equal(positional.second, 'b')
     })
 
     it('allows null arguments', () => {
       class Positional extends ValueObject.define('value') {}
 
-      const struct = new Positional(null)
-      assert.equal(struct.value, null)
+      const positional = new Positional(null)
+      assert.equal(positional.value, null)
     })
 
     it('does not allow undefined arguments', () => {
@@ -45,8 +45,8 @@ describe(ValueObject.name, () => {
 
       const deserialize = buildDeserialize([{ Positional }])
 
-      const struct = new Positional('a', 'b')
-      const serialized = JSON.stringify(struct)
+      const positional = new Positional('a', 'b')
+      const serialized = JSON.stringify(positional)
       const deserialized = deserialize(serialized)
       assert.equal(deserialized.constructor, Positional)
       assert.equal(deserialized.first, 'a')
@@ -60,23 +60,23 @@ describe(ValueObject.name, () => {
 
       const a = 'A'
       const b = 'B'
-      const struct = new Named({ b, a })
-      assert.equal(struct.a, 'A')
-      assert.equal(struct.b, 'B')
+      const named = new Named({ b, a })
+      assert.equal(named.a, 'A')
+      assert.equal(named.b, 'B')
     })
 
-    it('is equal to another struct with the same property values', () => {
+    it('is equal to another value object with the same property values', () => {
       class Foo extends ValueObject.define({ prop1: 'string' }) {}
       assert(new Foo({ prop1: 'dave' }).isEqualTo(new Foo({ prop1: 'dave' })))
     })
 
-    it('is not equal to another struct of different type with the same property values', () => {
+    it('is not equal to another value object of different type with the same property values', () => {
       class Foo extends ValueObject.define({ prop1: 'string' }) {}
       class Bar extends ValueObject.define({ prop1: 'string' }) {}
       assert(!new Foo({ prop1: 'dave' }).isEqualTo(new Bar({ prop1: 'dave' })))
     })
 
-    it('is not equal to another struct with different property values', () => {
+    it('is not equal to another value object with different property values', () => {
       class Foo extends ValueObject.define({ prop1: 'string' }) {}
       assert(!new Foo({ prop1: 'bob' }).isEqualTo(new Foo({ prop1: 'andy' })))
     })
@@ -99,26 +99,26 @@ describe(ValueObject.name, () => {
     it('allows null arguments', () => {
       class Named extends ValueObject.define({ value: 'string' }) {}
 
-      const struct = new Named({ value: null })
-      assert.equal(struct.value, null)
+      const named = new Named({ value: null })
+      assert.equal(named.value, null)
     })
 
     it('does not allow setting new properties', () => {
       class Named extends ValueObject.define({ ok: 'string', ko: 'string' }) {}
-      const struct = new Named({ ok: 'yep', ko: 'hey' })
+      const named = new Named({ ok: 'yep', ko: 'hey' })
 
       assertThrows(
-        () => struct.dingbat = 'badger',
+        () => named.dingbat = 'badger',
         "Can't add property dingbat, object is not extensible"
       )
     })
 
     it('does not allow mutating existing properties', () => {
       class Named extends ValueObject.define({ ok: 'string', ko: 'string' }) {}
-      const struct = new Named({ ok: 'yep', ko: 'hey' })
+      const named = new Named({ ok: 'yep', ko: 'hey' })
 
       assertThrows(
-        () => struct.ok = 'badger',
+        () => named.ok = 'badger',
         "Cannot assign to read only property 'ok' of object '#<Named>'"
       )
     })
@@ -165,10 +165,10 @@ describe(ValueObject.name, () => {
       const a = 'A'
       const b = 3
       const c = false
-      const struct = new Named({ b, a, c })
-      assert.equal(struct.a, 'A')
-      assert.equal(struct.b, 3)
-      assert.equal(struct.c, false)
+      const named = new Named({ b, a, c })
+      assert.equal(named.a, 'A')
+      assert.equal(named.b, 3)
+      assert.equal(named.c, false)
     })
 
     it('fails for primitive type when instantiated with the wrong type', () => {
@@ -227,8 +227,8 @@ describe(ValueObject.name, () => {
 
       const x = 666
       const y = 'banana'
-      const struct = new Named({ x, y })
-      const serialized = JSON.stringify(struct)
+      const named = new Named({ x, y })
+      const serialized = JSON.stringify(named)
       const deserialized = deserialize(serialized)
       assert.equal(deserialized.constructor, Named)
       assert.equal(deserialized.x, 666)
@@ -242,8 +242,8 @@ describe(ValueObject.name, () => {
 
       const dateJSON = '2016-06-25T15:43:04.323Z'
       const date = new Date(dateJSON)
-      const struct = new Named({ date })
-      const serialized = JSON.stringify(struct)
+      const named = new Named({ date })
+      const serialized = JSON.stringify(named)
       const deserialized = deserialize(serialized)
       assert.equal(deserialized.constructor, Named)
       assert.equal(deserialized.date.getTime(), date.getTime())
@@ -291,7 +291,7 @@ describe(ValueObject.name, () => {
   })
 
   describe('.with(newPropertyValues)', () => {
-    it('creates a new struct overriding any stated values', () => {
+    it('creates a new value object overriding any stated values', () => {
       class MyValueObject extends ValueObject {}
       MyValueObject.properties = { propA: 'string', propB: 'number', propC: 'string' }
       const original = new MyValueObject({ propA: 'ZZ', propB: 123, propC: 'AA' })
