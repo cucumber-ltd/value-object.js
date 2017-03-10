@@ -263,6 +263,20 @@ describe(ValueObject.name, () => {
       )
     })
 
+    it('allows additional processing before freezing its property values', () => {
+      class Special extends ValueObject.define({ x: 'number' }) {
+        _init() {
+          Object.defineProperty(this, 'y', {
+            value: 123,
+            enumerable: true,
+            writable: false
+          })
+        }
+      }
+      const special = new Special({ x: 0 })
+      assert.equal(special.y, 123)
+    })
+
     describe('.toJSON()', () => {
       it('includes inherited properties', () => {
         class Base extends ValueObject {}
