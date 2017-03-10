@@ -105,7 +105,7 @@ gbp2.isEqualTo(gbp)
 
 ## Immutability
 
-Value objects cannot be updated. Use [strict mode](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Strict_mode):
+Value objects cannot be updated. Use [strict mode](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Strict_mode)
 to throw errors when attempts to set property values are made.
 
 ```js
