@@ -198,9 +198,11 @@ class ValueObject {
       const constructor = constructors[value.__type__]
 
       if (!constructor)
-        throw new Error(`Unable to deserialize an object with type "${value.__type__}". Make sure you register that constructor when building deserialize.`)
+        throw new Error(`Unable to deserialize an object with type "${value.__type__}".` +
+        " Make sure you register that constructor when building deserialize.")
       if (typeof constructor.fromJSON !== 'function')
-        throw new Error(`Unable to deserialize an object with type "${value.__type__}". Deserializable types must have a static fromJSON method.`)
+        throw new Error(`Unable to deserialize an object with type "${value.__type__}".` +
+        " Deserializable types must have a static fromJSON method.")
 
       return constructor.fromJSON(value)
     }
