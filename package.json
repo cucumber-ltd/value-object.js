@@ -1,12 +1,12 @@
 {
   "name": "value-object",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "value-object.js - simple value objects",
-  "main": "dist/index.js",
+  "main": "dist/valueObject.js",
   "scripts": {
     "test": "npm run eslint && npm run coverage",
     "eslint": "eslint src test",
-    "build": "babel src --out-dir dist",
+    "build": "rm -rf dist && babel src --out-dir dist",
     "prepublish": "npm run build",
     "postinstall": "node scripts/postinstall.js",
     "mocha": "mocha",

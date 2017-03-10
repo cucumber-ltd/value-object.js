@@ -5,7 +5,7 @@ const { ValidationFailures } = require('./validation')
 class ValueObject {
   static define(properties) {
     const props = typeof properties == 'object' ? properties : [].slice.apply(arguments)
-    const klass = class MyValueObject extends ValueObject { }
+    const klass = class MyValueObject extends ValueObject {}
     klass.properties = props
     return klass
   }
@@ -91,19 +91,15 @@ class ValueObject {
         const descriptions = Object.keys(expectedTypeDescriptions).map(propertyName => `${propertyName}:${expectedTypeDescriptions[propertyName]}`).join(', ')
         const message = `${this.constructor.name} { ${descriptions} } called with { ${propertyName}: undefined }`
         throw new TypeError(message)
-      }
-
-      if (propertyName in propertyValues) {
-        if (argument === null) {
-          argumentTypeDescriptions[propertyName] = null
-        } else {
-          argumentTypeDescriptions[propertyName] = argumentTypeName == 'object' ? 'object ' + argument.constructor.name : argumentTypeName
-          if (typeof expectedType == 'function') {
-            if (!(argument instanceof expectedType))
-              compatibleTypes = false
-          } else if (expectedType !== argumentTypeName) {
+      } else if (argument === null) {
+        argumentTypeDescriptions[propertyName] = null
+      } else {
+        argumentTypeDescriptions[propertyName] = argumentTypeName == 'object' ? 'object ' + argument.constructor.name : argumentTypeName
+        if (typeof expectedType == 'function') {
+          if (!(argument instanceof expectedType))
             compatibleTypes = false
-          }
+        } else if (expectedType !== argumentTypeName) {
+          compatibleTypes = false
         }
       }
     }
@@ -185,6 +181,69 @@ class ValueObject {
   with(newPropertyValues) {
     return this.constructor.fromJSON(Object.assign(this.toJSON(), newPropertyValues))
   }
+
+  static deserializeForNamespaces(namespaces) {
+    const constructors = namespaces.reduce((ctors, namespace) => {
+      if (!namespace)
+        throw new Error('One of your namespaces is undefined.')
+
+      return Object.assign(ctors, namespace)
+    }, {})
+
+    return (json) => JSON.parse(json, revive)
+
+    function revive(key, value) {
+      if (!value || !value.__type__) return value
+
+      const constructor = constructors[value.__type__]
+
+      if (!constructor)
+        throw new Error(`Unable to deserialize an object with type "${value.__type__}". Make sure you register that constructor when building deserialize.`)
+      if (typeof constructor.fromJSON !== 'function')
+        throw new Error(`Unable to deserialize an object with type "${value.__type__}". Deserializable types must have a static fromJSON method.`)
+
+      return constructor.fromJSON(value)
+    }
+  }
 }
+
+class Scalar extends ValueObject.define({ value: 'string' }) {
+  /**
+   * A scalar can be constructed with a string or an object {value: somestring}. The
+   * former is for convenience, the latter for deserialisation
+   * @param value string or object
+   */
+  constructor(value) {
+    if (typeof value == 'string')
+      super({ value })
+    else
+      super(value)
+  }
+
+  valueOf() {
+    return this.value
+  }
+
+  inspect(_, options) {
+    if (options.stylize)
+      return `${this.constructor.name} { value: '${options.stylize(this.value, 'string')}' }`
+    else
+      return `${this.constructor.name} { value: '${this.value}' }`
+  }
+
+  get uriEncoded() {
+    return encodeURI(this.value)
+  }
+
+  get uriComponentEncoded() {
+    return encodeURIComponent(this.value)
+  }
+
+  get queryEncoded() {
+    return this.uriComponentEncoded.replace(/%20/g, '+')
+  }
+}
+
+ValueObject.Scalar = Scalar
 
 module.exports = ValueObject

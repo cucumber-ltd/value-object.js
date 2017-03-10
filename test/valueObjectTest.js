@@ -3,7 +3,7 @@
 
 const assert = require('assert')
 const assertThrows = require('./assertThrows')
-const { ValueObject, buildDeserialize } = require('../src')
+const ValueObject = require('../src/valueObject')
 
 describe(ValueObject.name, () => {
   context('with positional properties', () => {
@@ -43,7 +43,7 @@ describe(ValueObject.name, () => {
     it('can be serialized', () => {
       class Positional extends ValueObject.define('first', 'second') {}
 
-      const deserialize = buildDeserialize([{ Positional }])
+      const deserialize = ValueObject.deserializeForNamespaces([{ Positional }])
 
       const positional = new Positional('a', 'b')
       const serialized = JSON.stringify(positional)
@@ -223,7 +223,7 @@ describe(ValueObject.name, () => {
     it('can be serialized', () => {
       class Named extends ValueObject.define({ x: 'number', y: 'string' }) {}
 
-      const deserialize = buildDeserialize([{ Named }])
+      const deserialize = ValueObject.deserializeForNamespaces([{ Named }])
 
       const x = 666
       const y = 'banana'
@@ -238,7 +238,7 @@ describe(ValueObject.name, () => {
     it('can be serialized with Date field', () => {
       class Named extends ValueObject.define({ date: Date }) {}
 
-      const deserialize = buildDeserialize([{ Named }])
+      const deserialize = ValueObject.deserializeForNamespaces([{ Named }])
 
       const dateJSON = '2016-06-25T15:43:04.323Z'
       const date = new Date(dateJSON)
