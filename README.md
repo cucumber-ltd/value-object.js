@@ -62,6 +62,14 @@ gbp.isEqualTo(new Currency({ code: 'GBP', name: 'British Pounds' }))
 
 gbp.isEqualTo(new Currency({ code: 'EUR', name: 'Euros' }))
 // => false
+
+const gbpPrice = new Money({ amount: 123, currency: gbp })
+const eurPrice = new Money({ amount: 123, currency: eur })
+gbpPrice.isEqualTo(eurPrice)
+// => false
+
+eurPrice.isEqualTo(new Money({ amount: 123, currency: eur }))
+// => true
 ```
 
 ## Creating new value objects from existing value objects
