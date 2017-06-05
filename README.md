@@ -43,12 +43,12 @@ incorrect arguments:
 
 ```js
 new Currency({ code: 'USD', name: 123 })
-// => TypeError: Currency(code:string, name:string) called with wrong types (code:string, name:number)
+// => TypeError: Currency({code:string, name:string}) called with wrong types {code:string, name:number}
 
 new Currency({ code: 'NZD', name: 'New Zealand Dollars', colour: 'All black' })
 // => TypeError: Currency({code, name}) called with {code, name, colour}
 
-> new Money({ amount: 123 })
+new Money({ amount: 123 })
 // => TypeError: Money({currency, amount}) called with {amount}
 ```
 
@@ -70,6 +70,21 @@ gbpPrice.isEqualTo(eurPrice)
 
 eurPrice.isEqualTo(new Money({ amount: 123, currency: eur }))
 // => true
+```
+
+## Array values
+
+To specify array values wrap the type definition (e.g. `'number'`, `Date`) in `[]`
+
+```js
+class Point extends ValueObject.define({
+  x: 'number',
+  y: 'number'
+}) {}
+
+class Polygon extends ValueObject.define({
+  vertices: [Point] // instances of Point
+}) {}
 ```
 
 ## Creating new value objects from existing value objects
