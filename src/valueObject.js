@@ -2,9 +2,66 @@
 
 const { ValidationFailures } = require('./validation')
 
+function checkType(propertyName, value, typeDefinition) {
+  let expected
+  if (typeof typeDefinition === 'function') {
+    expected = `instanceof ${typeDefinition.name}`
+  } else if (Array.isArray(typeDefinition)) {
+    expected = `[${typeof typeDefinition[0] === 'function' ? 'instanceof '+typeDefinition[0].name : typeDefinition[0]}]`
+  } else {
+    expected = typeDefinition
+  }
+
+  let actual
+  if (Array.isArray(value)) {
+    const typesOfElements = Array.from(new Set(value.map(v => typeof v === 'object' ? 'instanceof '+v.constructor.name : typeof v)))
+    if (typesOfElements.length === 1) {
+      actual = `[${typesOfElements[0]}]`
+    } else {
+      actual = `array of multiple types`
+    }
+  } else if (typeof value === 'object') {
+    if (value === null) {
+      actual = null
+    } else {
+      actual = `instanceof ${value.constructor.name}`
+    }
+  } else {
+    actual = typeof value
+  }
+
+  let valid
+  if (value === null) {
+    valid = true
+  } else if (Array.isArray(value) && Array.isArray(typeDefinition) && typeof typeDefinition[0] === 'function') {
+    valid = value.every(v => v instanceof typeDefinition[0])
+  } else if (typeof value === 'object' && typeof typeDefinition === 'function') {
+    valid = value instanceof typeDefinition
+  } else {
+    valid = expected === actual
+  }
+
+  return {
+    valid,
+    actual,
+    expected,
+    propertyName
+  }
+}
+
 class ValueObject {
   static define(properties) {
-    const props = typeof properties == 'object' ? properties : [].slice.apply(arguments)
+    let props
+    if (typeof properties === 'object') {
+      Object.values(properties).forEach(typeDefinition => {
+        if (Array.isArray(typeDefinition) && typeDefinition.length != 1) {
+          throw new TypeError('Expected an array to contain a single type element.')
+        }
+      })
+      props = properties
+    } else {
+      props = [].slice.apply(arguments)
+    }
     const klass = class MyValueObject extends ValueObject {}
     klass.properties = props
     return klass
@@ -71,43 +128,16 @@ class ValueObject {
     const samePropertyNames = expectedPropertyNames.length == actualPropertyNames.length && expectedPropertyNames.every(propertyName => propertyName in propertyValues)
     if (!samePropertyNames) throw new TypeError(`${this.constructor.name}({${expectedPropertyNames.join(', ')}}) called with {${actualPropertyNames.join(', ')}}`)
 
-    // Check that the property values are compatible
-    let compatibleTypes = true
-    const expectedTypeDescriptions = {}
-    const argumentTypeDescriptions = {}
-    for (const propertyName of expectedPropertyNames) {
-      // Build error message for expected type
-      const expectedType = properties[propertyName]
-      expectedTypeDescriptions[propertyName] = typeof expectedType == 'function' ? 'instanceof ' + expectedType.name : expectedType
-    }
+    const typeCheckResults = actualPropertyNames.map(propertyName => {
+      return checkType(propertyName, propertyValues[propertyName], properties[propertyName])
+    })
 
-    for (const propertyName of actualPropertyNames) {
-      // Build error message for argument type
-      const expectedType = properties[propertyName]
-      const argument = propertyValues[propertyName]
-      const argumentTypeName = typeof argument
+    const typeErrors = typeCheckResults.filter(tc => !tc.valid)
 
-      if (argument === undefined) {
-        const descriptions = Object.keys(expectedTypeDescriptions).map(propertyName => `${propertyName}:${expectedTypeDescriptions[propertyName]}`).join(', ')
-        const message = `${this.constructor.name} { ${descriptions} } called with { ${propertyName}: undefined }`
-        throw new TypeError(message)
-      } else if (argument === null) {
-        argumentTypeDescriptions[propertyName] = null
-      } else {
-        argumentTypeDescriptions[propertyName] = argumentTypeName == 'object' ? 'object ' + argument.constructor.name : argumentTypeName
-        if (typeof expectedType == 'function') {
-          if (!(argument instanceof expectedType))
-            compatibleTypes = false
-        } else if (expectedType !== argumentTypeName) {
-          compatibleTypes = false
-        }
-      }
-    }
-
-    if (!compatibleTypes) {
-      const expected = Object.keys(expectedTypeDescriptions).map(propertyName => `${propertyName}:${expectedTypeDescriptions[propertyName]}`).join(', ')
-      const actual = Object.keys(argumentTypeDescriptions).map(propertyName => `${propertyName}:${argumentTypeDescriptions[propertyName]}`).join(', ')
-      throw new TypeError(`${this.constructor.name}(${expected}) called with wrong types (${actual})`)
+    if (typeErrors.length > 0) {
+      const expected = typeCheckResults.map(tc => `${tc.propertyName}:${tc.expected}`).join(', ')
+      const actual = typeCheckResults.map(tc => `${tc.propertyName}:${tc.actual}`).join(', ')
+      throw new TypeError(`${this.constructor.name}({${expected}}) called with wrong types {${actual}}`)
     }
 
     for (const propertyName of Object.keys(properties)) {
