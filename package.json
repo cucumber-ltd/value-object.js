@@ -1,6 +1,6 @@
 {
   "name": "value-object",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "value-object.js - simple value objects",
   "main": "dist/valueObject.js",
   "scripts": {
