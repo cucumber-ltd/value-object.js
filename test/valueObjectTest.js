@@ -113,7 +113,7 @@ describe(ValueObject.name, () => {
 
       assertThrows(
         () => named.dingbat = 'badger',
-        "Can't add property dingbat, object is not extensible"
+        "Cannot add property dingbat, object is not extensible"
       )
     })
 
