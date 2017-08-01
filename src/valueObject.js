@@ -62,9 +62,9 @@ class ValueObject {
     } else {
       props = [].slice.apply(arguments)
     }
-    const klass = class MyValueObject extends ValueObject {}
-    klass.properties = props
-    return klass
+    const subclass = class ValueObject extends this {}
+    subclass.properties = props
+    return subclass
   }
 
   static get allProperties() {
@@ -81,7 +81,9 @@ class ValueObject {
   }
 
   constructor() {
-    if (!('properties' in this.constructor)) throw new Error('ValueObjects must define static properties member')
+    if (typeof this.constructor.properties === 'undefined') {
+      throw new Error('ValueObjects must define static properties member')
+    }
     if (Array.isArray(this.constructor.properties)) {
       this._assignPositionalProperties(this.constructor.allProperties, arguments)
     } else {

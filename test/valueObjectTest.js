@@ -400,6 +400,29 @@ describe(ValueObject.name, () => {
       )
     })
 
+    it('allows subclasses to implement throwValidationError', () => {
+      class MyValueObject extends ValueObject {
+        throwValidationError(failures) {
+          throw new Error('oh no: ' + failures.map(f => JSON.stringify(f)))
+        }
+      }
+      class Event extends MyValueObject.define({ year: 'number' }) {
+        addValidationFailures(failures) {
+          if (this.year <= 0) {
+            failures.for('year').add('must be > 0')
+            failures.add('is invalid')
+          }
+        }
+      }
+      const validEvent = new Event({ year: 2001 })
+      validEvent.validate()
+      const invalidEvent = new Event({ year: 0 })
+      assertThrows(
+        () => invalidEvent.validate(),
+        'oh no: {"property":"year","message":"must be > 0"},{"message":"is invalid"}'
+      )
+    })
+
     it('does nothing by default', () => {
       class Day extends ValueObject.define({ name: 'string' }) {}
       const validDay = new Day({ name: 'Sunday' })
