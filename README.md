@@ -4,8 +4,8 @@
 properties. Two value objects with the same values for all their properties are
 considered equal.
 
-This library provides a convenient way to define strict, immutable value objects
-represented by ES6 classes.
+This library provides a convenient way to define strict, immutable value
+objects.
 
 ## Install
 
