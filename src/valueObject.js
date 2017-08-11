@@ -2,68 +2,13 @@
 
 const { ValidationFailures, ValidationError } = require('./validation')
 
-function checkType(propertyName, value, typeDefinition) {
-  let expected
-  if (typeof typeDefinition === 'function') {
-    expected = `instanceof ${typeDefinition.name}`
-  } else if (Array.isArray(typeDefinition)) {
-    expected = `[${typeof typeDefinition[0] === 'function' ? 'instanceof '+typeDefinition[0].name : typeDefinition[0]}]`
-  } else {
-    expected = typeDefinition
-  }
-
-  let actual
-  if (Array.isArray(value)) {
-    const typesOfElements = Array.from(new Set(value.map(v => typeof v === 'object' ? 'instanceof '+v.constructor.name : typeof v)))
-    if (typesOfElements.length === 1) {
-      actual = `[${typesOfElements[0]}]`
-    } else {
-      actual = `array of multiple types`
-    }
-  } else if (typeof value === 'object') {
-    if (value === null) {
-      actual = null
-    } else {
-      actual = `instanceof ${value.constructor.name}`
-    }
-  } else {
-    actual = typeof value
-  }
-
-  let valid
-  if (value === null) {
-    valid = true
-  } else if (Array.isArray(value) && Array.isArray(typeDefinition) && typeof typeDefinition[0] === 'function') {
-    valid = value.every(v => v instanceof typeDefinition[0])
-  } else if (typeof value === 'object' && typeof typeDefinition === 'function') {
-    valid = value instanceof typeDefinition
-  } else {
-    valid = expected === actual
-  }
-
-  return {
-    valid,
-    actual,
-    expected,
-    propertyName
-  }
-}
-
-function makeValueObjectSubclass(Superclass, properties) {
-  const Subclass = class ValueObjectSubclass extends Superclass {}
-  Subclass.properties = properties
-  return Subclass
-}
-
 class ValueObject {
   static define(properties) {
     if (this !== ValueObject) throw new Error('ValueObject.define() cannot be called on subclasses')
-    Object.values(properties).forEach(typeDefinition => {
-      if (Array.isArray(typeDefinition) && typeDefinition.length != 1) {
-        throw new TypeError('Expected an array to contain a single type element.')
-      }
-    })
-    return makeValueObjectSubclass(this, properties)
+    validateArrayProperties(properties)
+    const Subclass = class ValueObject extends this {}
+    Subclass.properties = properties
+    return Subclass
   }
 
   static get allProperties() {
@@ -77,10 +22,7 @@ class ValueObject {
   }
 
   constructor() {
-    if (typeof this.constructor.properties === 'undefined') {
-      throw new Error('ValueObjects must define static properties member')
-    }
-    this._assignNamedProperties(this.constructor.allProperties, arguments)
+    assignNamedProperties(this, arguments)
     this._init()
     Object.freeze(this)
   }
@@ -90,37 +32,6 @@ class ValueObject {
    * @private
    */
   _init() {
-  }
-
-  _assignNamedProperties(properties, args) {
-    // Check that the property names are the same
-    const propertyValues = args[0] || {}
-    const expectedPropertyNames = Object.keys(properties)
-    const actualPropertyNames = Object.keys(propertyValues)
-    if (args.length != 1) throw new TypeError(`${this.constructor.name}({${expectedPropertyNames.join(', ')}}) called with ${args.length} arguments`)
-
-    const samePropertyNames = expectedPropertyNames.length == actualPropertyNames.length && expectedPropertyNames.every(propertyName => propertyName in propertyValues)
-    if (!samePropertyNames) throw new TypeError(`${this.constructor.name}({${expectedPropertyNames.join(', ')}}) called with {${actualPropertyNames.join(', ')}}`)
-
-    const typeCheckResults = actualPropertyNames.map(propertyName => {
-      return checkType(propertyName, propertyValues[propertyName], properties[propertyName])
-    })
-
-    const typeErrors = typeCheckResults.filter(tc => !tc.valid)
-
-    if (typeErrors.length > 0) {
-      const expected = typeCheckResults.map(tc => `${tc.propertyName}:${tc.expected}`).join(', ')
-      const actual = typeCheckResults.map(tc => `${tc.propertyName}:${tc.actual}`).join(', ')
-      throw new TypeError(`${this.constructor.name}({${expected}}) called with wrong types {${actual}}`)
-    }
-
-    for (const propertyName of Object.keys(properties)) {
-      Object.defineProperty(this, propertyName, {
-        value: propertyValues[propertyName],
-        enumerable: true,
-        writable: false
-      })
-    }
   }
 
   toJSON() {
@@ -237,6 +148,94 @@ class Scalar extends ValueObject.define({ value: 'string' }) {
 
   get queryEncoded() {
     return this.uriComponentEncoded.replace(/%20/g, '+')
+  }
+}
+
+function checkType(propertyName, value, typeDefinition) {
+  let expected
+  if (typeof typeDefinition === 'function') {
+    expected = `instanceof ${typeDefinition.name}`
+  } else if (Array.isArray(typeDefinition)) {
+    expected = `[${typeof typeDefinition[0] === 'function' ? 'instanceof '+typeDefinition[0].name : typeDefinition[0]}]`
+  } else {
+    expected = typeDefinition
+  }
+
+  let actual
+  if (Array.isArray(value)) {
+    const typesOfElements = Array.from(new Set(value.map(v => typeof v === 'object' ? 'instanceof '+v.constructor.name : typeof v)))
+    if (typesOfElements.length === 1) {
+      actual = `[${typesOfElements[0]}]`
+    } else {
+      actual = `array of multiple types`
+    }
+  } else if (typeof value === 'object') {
+    if (value === null) {
+      actual = null
+    } else {
+      actual = `instanceof ${value.constructor.name}`
+    }
+  } else {
+    actual = typeof value
+  }
+
+  let valid
+  if (value === null) {
+    valid = true
+  } else if (Array.isArray(value) && Array.isArray(typeDefinition) && typeof typeDefinition[0] === 'function') {
+    valid = value.every(v => v instanceof typeDefinition[0])
+  } else if (typeof value === 'object' && typeof typeDefinition === 'function') {
+    valid = value instanceof typeDefinition
+  } else {
+    valid = expected === actual
+  }
+
+  return {
+    valid,
+    actual,
+    expected,
+    propertyName
+  }
+}
+
+function validateArrayProperties(properties) {
+  Object.values(properties).forEach(typeDefinition => {
+    if (Array.isArray(typeDefinition) && typeDefinition.length != 1) {
+      throw new TypeError('Expected an array to contain a single type element.')
+    }
+  })
+}
+
+function assignNamedProperties(valueObject, args) {
+  const properties = valueObject.constructor.allProperties
+
+  // Check that the property names are the same
+  const propertyValues = args[0] || {}
+  const expectedPropertyNames = Object.keys(properties)
+  const actualPropertyNames = Object.keys(propertyValues)
+  if (args.length != 1) throw new TypeError(`${valueObject.constructor.name}({${expectedPropertyNames.join(', ')}}) called with ${args.length} arguments`)
+
+  const samePropertyNames = expectedPropertyNames.length == actualPropertyNames.length && expectedPropertyNames.every(propertyName => propertyName in propertyValues)
+  if (!samePropertyNames) throw new TypeError(`${valueObject.constructor.name}({${expectedPropertyNames.join(', ')}}) called with {${actualPropertyNames.join(', ')}}`)
+
+  const typeCheckResults = actualPropertyNames.map(propertyName => {
+    return checkType(propertyName, propertyValues[propertyName], properties[propertyName])
+  })
+
+  const typeErrors = typeCheckResults.filter(tc => !tc.valid)
+
+  if (typeErrors.length > 0) {
+    const expected = typeCheckResults.map(tc => `${tc.propertyName}:${tc.expected}`).join(', ')
+    const actual = typeCheckResults.map(tc => `${tc.propertyName}:${tc.actual}`).join(', ')
+    throw new TypeError(`${valueObject.constructor.name}({${expected}}) called with wrong types {${actual}}`)
+  }
+
+  for (const propertyName of Object.keys(properties)) {
+    Object.defineProperty(valueObject, propertyName, {
+      value: propertyValues[propertyName],
+      enumerable: true,
+      writable: false
+    })
   }
 }
 

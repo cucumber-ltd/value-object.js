@@ -304,17 +304,6 @@ describe(ValueObject.name, () => {
     })
   })
 
-  context('no properties defined', () => {
-    it('cannot be instantiated', () => {
-      class NoProperties extends ValueObject {
-      }
-      assertThrows(
-        () => new NoProperties(),
-        'ValueObjects must define static properties member'
-      )
-    })
-  })
-
   describe('.with(newPropertyValues)', () => {
     it('creates a new value object overriding any stated values', () => {
       class MyValueObject extends ValueObject {}
