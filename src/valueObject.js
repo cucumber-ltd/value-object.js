@@ -35,24 +35,7 @@ class ValueObject {
   }
 
   toJSON() {
-    const serialized = {
-      __type__: this.constructor.name
-    }
-    const properties = {}
-    let ctor = this.constructor
-    while (ctor !== ValueObject) {
-      Object.keys(ctor.properties).forEach(p => properties[p] = true)
-      ctor = Object.getPrototypeOf(ctor)
-    }
-    const propertyNames = Object.keys(properties)
-    for (const propertyName of propertyNames) {
-      if (this[propertyName] instanceof Date) {
-        serialized[propertyName] = this[propertyName].toISOString()
-      } else {
-        serialized[propertyName] = this[propertyName]
-      }
-    }
-    return serialized
+    return toJSON(this)
   }
 
   static fromJSON(raw) {
@@ -151,7 +134,53 @@ class Scalar extends ValueObject.define({ value: 'string' }) {
   }
 }
 
-function checkType(propertyName, value, typeDefinition) {
+function validateArrayProperties(properties) {
+  Object.values(properties).forEach(typeDefinition => {
+    if (Array.isArray(typeDefinition) && typeDefinition.length != 1) {
+      throw new TypeError('Expected an array to contain a single type element.')
+    }
+  })
+}
+
+function assignNamedProperties(valueObject, args) {
+  const properties = valueObject.constructor.allProperties
+  const { propertyNames, propertyValues } = getPropertyNamesAndValues(valueObject, args, properties)
+  checkPropertyTypes(valueObject, properties, propertyNames, propertyValues)
+  for (const propertyName of Object.keys(properties)) {
+    Object.defineProperty(valueObject, propertyName, {
+      value: propertyValues[propertyName],
+      enumerable: true,
+      writable: false
+    })
+  }
+}
+
+function getPropertyNamesAndValues(valueObject, args, properties) {
+  const propertyValues = args[0] || {}
+  const expectedPropertyNames = Object.keys(properties)
+  const propertyNames = Object.keys(propertyValues)
+  if (args.length != 1) throw new TypeError(`${valueObject.constructor.name}({${expectedPropertyNames.join(', ')}}) called with ${args.length} arguments`)
+
+  const samePropertyNames = expectedPropertyNames.length == propertyNames.length && expectedPropertyNames.every(propertyName => propertyName in propertyValues)
+  if (!samePropertyNames) throw new TypeError(`${valueObject.constructor.name}({${expectedPropertyNames.join(', ')}}) called with {${propertyNames.join(', ')}}`)
+
+  return { propertyNames, propertyValues }
+}
+
+function checkPropertyTypes(valueObject, properties, propertyNames, propertyValues) {
+  const typeCheckResults = propertyNames.map(propertyName => {
+    return checkPropertyType(propertyName, propertyValues[propertyName], properties[propertyName])
+  })
+
+  const typeErrors = typeCheckResults.filter(tc => !tc.valid)
+
+  if (typeErrors.length > 0) {
+    const expected = typeCheckResults.map(tc => `${tc.propertyName}:${tc.expected}`).join(', ')
+    const actual = typeCheckResults.map(tc => `${tc.propertyName}:${tc.actual}`).join(', ')
+    throw new TypeError(`${valueObject.constructor.name}({${expected}}) called with wrong types {${actual}}`)
+  }
+}
+function checkPropertyType(propertyName, value, typeDefinition) {
   let expected
   if (typeof typeDefinition === 'function') {
     expected = `instanceof ${typeDefinition.name}`
@@ -198,45 +227,24 @@ function checkType(propertyName, value, typeDefinition) {
   }
 }
 
-function validateArrayProperties(properties) {
-  Object.values(properties).forEach(typeDefinition => {
-    if (Array.isArray(typeDefinition) && typeDefinition.length != 1) {
-      throw new TypeError('Expected an array to contain a single type element.')
-    }
-  })
+function toJSON(valueObject) {
+  const serialized = {
+    __type__: valueObject.constructor.name
+  }
+  const properties = {}
+  let ctor = valueObject.constructor
+  while (ctor !== ValueObject) {
+    Object.keys(ctor.properties).forEach(p => properties[p] = true)
+    ctor = Object.getPrototypeOf(ctor)
+  }
+  for (const propertyName of Object.keys(properties)) {
+    serialized[propertyName] = serializeValue(valueObject[propertyName])
+  }
+  return serialized
 }
 
-function assignNamedProperties(valueObject, args) {
-  const properties = valueObject.constructor.allProperties
-
-  // Check that the property names are the same
-  const propertyValues = args[0] || {}
-  const expectedPropertyNames = Object.keys(properties)
-  const actualPropertyNames = Object.keys(propertyValues)
-  if (args.length != 1) throw new TypeError(`${valueObject.constructor.name}({${expectedPropertyNames.join(', ')}}) called with ${args.length} arguments`)
-
-  const samePropertyNames = expectedPropertyNames.length == actualPropertyNames.length && expectedPropertyNames.every(propertyName => propertyName in propertyValues)
-  if (!samePropertyNames) throw new TypeError(`${valueObject.constructor.name}({${expectedPropertyNames.join(', ')}}) called with {${actualPropertyNames.join(', ')}}`)
-
-  const typeCheckResults = actualPropertyNames.map(propertyName => {
-    return checkType(propertyName, propertyValues[propertyName], properties[propertyName])
-  })
-
-  const typeErrors = typeCheckResults.filter(tc => !tc.valid)
-
-  if (typeErrors.length > 0) {
-    const expected = typeCheckResults.map(tc => `${tc.propertyName}:${tc.expected}`).join(', ')
-    const actual = typeCheckResults.map(tc => `${tc.propertyName}:${tc.actual}`).join(', ')
-    throw new TypeError(`${valueObject.constructor.name}({${expected}}) called with wrong types {${actual}}`)
-  }
-
-  for (const propertyName of Object.keys(properties)) {
-    Object.defineProperty(valueObject, propertyName, {
-      value: propertyValues[propertyName],
-      enumerable: true,
-      writable: false
-    })
-  }
+function serializeValue(value) {
+  return value instanceof Date ? value.toISOString() : value
 }
 
 ValueObject.Scalar = Scalar
