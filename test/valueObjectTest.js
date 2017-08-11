@@ -3,7 +3,7 @@
 
 const assert = require('assert')
 const assertThrows = require('./assertThrows')
-const ValueObject = require('../src/valueObject')
+const ValueObject = require('../valueObject')
 
 describe(ValueObject.name, () => {
   context('with named properties', () => {
@@ -85,6 +85,14 @@ describe(ValueObject.name, () => {
       assertThrows(
         () => new Named({ ok: 'yep', ko: undefined }),
         'Named({ok:string, ko:[string]}) called with wrong types {ok:string, ko:undefined}'
+      )
+    })
+
+    it('does not allow calling define on ValueObject subclasses', () => {
+      class MyValueObject extends ValueObject {}
+      assertThrows(
+        () => MyValueObject.define({ year: 'number' }),
+        'ValueObject.define() cannot be called on subclasses'
       )
     })
 
@@ -338,40 +346,13 @@ describe(ValueObject.name, () => {
             failures.add('is invalid')
           }
         }
-
-        throwValidationError(failures) {
-          throw new Error('oh no: ' + failures.map(f => JSON.stringify(f)))
-        }
       }
       const validEvent = new Event({ year: 2001 })
       validEvent.validate()
       const invalidEvent = new Event({ year: 0 })
       assertThrows(
         () => invalidEvent.validate(),
-        'oh no: {"property":"year","message":"must be > 0"},{"message":"is invalid"}'
-      )
-    })
-
-    it('allows subclasses to implement throwValidationError', () => {
-      class MyValueObject extends ValueObject {
-        throwValidationError(failures) {
-          throw new Error('oh no: ' + failures.map(f => JSON.stringify(f)))
-        }
-      }
-      class Event extends MyValueObject.define({ year: 'number' }) {
-        addValidationFailures(failures) {
-          if (this.year <= 0) {
-            failures.for('year').add('must be > 0')
-            failures.add('is invalid')
-          }
-        }
-      }
-      const validEvent = new Event({ year: 2001 })
-      validEvent.validate()
-      const invalidEvent = new Event({ year: 0 })
-      assertThrows(
-        () => invalidEvent.validate(),
-        'oh no: {"property":"year","message":"must be > 0"},{"message":"is invalid"}'
+        'Event is invalid: year must be > 0, is invalid'
       )
     })
 

@@ -2,7 +2,7 @@
 'use strict'
 
 const assert = require('assert')
-const { Scalar } = require('../src/valueObject')
+const { Scalar } = require('../valueObject')
 
 describe(Scalar.name, () => {
   it('can be constructed with a value', () => {

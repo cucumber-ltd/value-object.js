@@ -3,7 +3,7 @@
 
 const assert = require('assert')
 const assertThrows = require('./assertThrows')
-const ValueObject = require('../src/valueObject')
+const ValueObject = require('../valueObject')
 
 describe(ValueObject.deserializeForNamespaces.name, () => {
   it('Builds a deserialize function that can turn a JSON representation of an object', () => {

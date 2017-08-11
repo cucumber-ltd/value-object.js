@@ -60,6 +60,16 @@ class InvalidProperty {
   }
 }
 
+class ValidationError extends Error {
+  constructor(object, failures) {
+    super(`${object.constructor.name} is invalid: ${failures.describe()}`)
+    Error.captureStackTrace(this, ValidationError)
+    this.object = object
+    this.failures = failures
+  }
+}
+
 module.exports = {
-  ValidationFailures
+  ValidationFailures,
+  ValidationError
 }

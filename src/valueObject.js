@@ -1,6 +1,6 @@
 'use strict'
 
-const { ValidationFailures } = require('./validation')
+const { ValidationFailures, ValidationError } = require('./validation')
 
 function checkType(propertyName, value, typeDefinition) {
   let expected
@@ -49,16 +49,21 @@ function checkType(propertyName, value, typeDefinition) {
   }
 }
 
+function makeValueObjectSubclass(Superclass, properties) {
+  const Subclass = class ValueObjectSubclass extends Superclass {}
+  Subclass.properties = properties
+  return Subclass
+}
+
 class ValueObject {
   static define(properties) {
+    if (this !== ValueObject) throw new Error('ValueObject.define() cannot be called on subclasses')
     Object.values(properties).forEach(typeDefinition => {
       if (Array.isArray(typeDefinition) && typeDefinition.length != 1) {
         throw new TypeError('Expected an array to contain a single type element.')
       }
     })
-    const Subclass = class ValueObject extends this {}
-    Subclass.properties = properties
-    return Subclass
+    return makeValueObjectSubclass(this, properties)
   }
 
   static get allProperties() {
@@ -159,16 +164,12 @@ class ValueObject {
     const failures = new ValidationFailures()
     this.addValidationFailures(failures)
     if (failures.any())
-      this.throwValidationError(failures)
+      throw new ValidationError(this, failures)
   }
 
   addValidationFailures(/* failures */) {
     // override this in subclasses e.g:
     // failures.for('someProperty').add('Some message')
-  }
-
-  throwValidationError(failures) {
-    throw new Error(`${this.constructor.name} is invalid: ${failures.describe()}`)
   }
 
   with(newPropertyValues) {
