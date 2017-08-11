@@ -1,6 +1,7 @@
 'use strict'
 
 const Schema = require('./schema')
+const Serialization = require('./serialization')
 const { ValidationFailures, ValidationError } = require('./validation')
 
 class ValueObject {
@@ -36,18 +37,11 @@ class ValueObject {
   }
 
   toJSON() {
-    return toJSON(this)
+    return Serialization.toJSON(this, ValueObject)
   }
 
   static fromJSON(raw) {
-    const args = Object.assign({}, raw)
-    delete args.__type__
-    for (const propertyName in this.allProperties) {
-      if (this.allProperties[propertyName] == Date) {
-        args[propertyName] = new Date(args[propertyName])
-      }
-    }
-    return new this(args)
+    return Serialization.fromJSON(raw, this.allProperties, this)
   }
 
   isEqualTo(otherValueObject) {
@@ -72,29 +66,7 @@ class ValueObject {
   }
 
   static deserializeForNamespaces(namespaces) {
-    const constructors = namespaces.reduce((ctors, namespace) => {
-      if (!namespace)
-        throw new Error('One of your namespaces is undefined.')
-
-      return Object.assign(ctors, namespace)
-    }, {})
-
-    return (json) => JSON.parse(json, revive)
-
-    function revive(key, value) {
-      if (!value || !value.__type__) return value
-
-      const constructor = constructors[value.__type__]
-
-      if (!constructor)
-        throw new Error(`Unable to deserialize an object with type "${value.__type__}".` +
-        " Make sure you register that constructor when building deserialize.")
-      if (typeof constructor.fromJSON !== 'function')
-        throw new Error(`Unable to deserialize an object with type "${value.__type__}".` +
-        " Deserializable types must have a static fromJSON method.")
-
-      return constructor.fromJSON(value)
-    }
+    return Serialization.deserializeForNamespaces(namespaces)
   }
 }
 
@@ -133,26 +105,6 @@ class Scalar extends ValueObject.define({ value: 'string' }) {
   get queryEncoded() {
     return this.uriComponentEncoded.replace(/%20/g, '+')
   }
-}
-
-function toJSON(valueObject) {
-  const serialized = {
-    __type__: valueObject.constructor.name
-  }
-  const properties = {}
-  let ctor = valueObject.constructor
-  while (ctor !== ValueObject) {
-    Object.keys(ctor.properties).forEach(p => properties[p] = true)
-    ctor = Object.getPrototypeOf(ctor)
-  }
-  for (const propertyName of Object.keys(properties)) {
-    serialized[propertyName] = serializeValue(valueObject[propertyName])
-  }
-  return serialized
-}
-
-function serializeValue(value) {
-  return value instanceof Date ? value.toISOString() : value
 }
 
 ValueObject.Scalar = Scalar
