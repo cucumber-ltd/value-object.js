@@ -51,30 +51,21 @@ function checkType(propertyName, value, typeDefinition) {
 
 class ValueObject {
   static define(properties) {
-    let props
-    if (typeof properties === 'object') {
-      Object.values(properties).forEach(typeDefinition => {
-        if (Array.isArray(typeDefinition) && typeDefinition.length != 1) {
-          throw new TypeError('Expected an array to contain a single type element.')
-        }
-      })
-      props = properties
-    } else {
-      props = [].slice.apply(arguments)
-    }
-    const subclass = class ValueObject extends this {}
-    subclass.properties = props
-    return subclass
+    Object.values(properties).forEach(typeDefinition => {
+      if (Array.isArray(typeDefinition) && typeDefinition.length != 1) {
+        throw new TypeError('Expected an array to contain a single type element.')
+      }
+    })
+    const Subclass = class ValueObject extends this {}
+    Subclass.properties = properties
+    return Subclass
   }
 
   static get allProperties() {
     let ctor = this
-    let allProperties = Array.isArray(this.properties) ? [] : {}
+    let allProperties = {}
     while (ctor !== ValueObject) {
-      if (Array.isArray(allProperties))
-        allProperties = Array.from(new Set(allProperties.concat(ctor.properties)))
-      else
-        Object.assign(allProperties, ctor.properties)
+      Object.assign(allProperties, ctor.properties)
       ctor = Object.getPrototypeOf(ctor)
     }
     return allProperties
@@ -84,11 +75,7 @@ class ValueObject {
     if (typeof this.constructor.properties === 'undefined') {
       throw new Error('ValueObjects must define static properties member')
     }
-    if (Array.isArray(this.constructor.properties)) {
-      this._assignPositionalProperties(this.constructor.allProperties, arguments)
-    } else {
-      this._assignNamedProperties(this.constructor.allProperties, arguments)
-    }
+    this._assignNamedProperties(this.constructor.allProperties, arguments)
     this._init()
     Object.freeze(this)
   }
@@ -98,26 +85,6 @@ class ValueObject {
    * @private
    */
   _init() {
-  }
-
-  _assignPositionalProperties(properties, args) {
-    if (properties.length !== args.length) {
-      const message = `${this.constructor.name}(${properties.join(', ')}) called with ${args.length} arguments`
-      throw new TypeError(message)
-    }
-
-    properties.forEach((propertyName, position) => {
-      const argument = args[position]
-      if (argument === undefined) {
-        const message = `${this.constructor.name}(${this.constructor.properties.join(', ')}) called with undefined for ${propertyName}`
-        throw new TypeError(message)
-      }
-      Object.defineProperty(this, propertyName, {
-        value: argument,
-        enumerable: true,
-        writable: false
-      })
-    })
   }
 
   _assignNamedProperties(properties, args) {
@@ -158,8 +125,7 @@ class ValueObject {
     const properties = {}
     let ctor = this.constructor
     while (ctor !== ValueObject) {
-      const ctorProps = Array.isArray(ctor.properties) ? ctor.properties : Object.keys(ctor.properties)
-      ctorProps.forEach(p => properties[p] = true)
+      Object.keys(ctor.properties).forEach(p => properties[p] = true)
       ctor = Object.getPrototypeOf(ctor)
     }
     const propertyNames = Object.keys(properties)
@@ -174,19 +140,14 @@ class ValueObject {
   }
 
   static fromJSON(raw) {
-    if (Array.isArray(this.allProperties)) {
-      const args = this.allProperties.map(propertyName => raw[propertyName])
-      return new this(...args)
-    } else {
-      const args = Object.assign({}, raw)
-      delete args.__type__
-      for (const propertyName in this.allProperties) {
-        if (this.allProperties[propertyName] == Date) {
-          args[propertyName] = new Date(args[propertyName])
-        }
+    const args = Object.assign({}, raw)
+    delete args.__type__
+    for (const propertyName in this.allProperties) {
+      if (this.allProperties[propertyName] == Date) {
+        args[propertyName] = new Date(args[propertyName])
       }
-      return new this(args)
     }
+    return new this(args)
   }
 
   isEqualTo(otherValueObject) {

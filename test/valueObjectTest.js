@@ -6,54 +6,6 @@ const assertThrows = require('./assertThrows')
 const ValueObject = require('../src/valueObject')
 
 describe(ValueObject.name, () => {
-  context('with positional properties', () => {
-    it('sets its properties to the constructor arguments', () => {
-      class Positional extends ValueObject.define('first', 'second') {}
-
-      const positional = new Positional('a', 'b')
-      assert.equal(positional.first, 'a')
-      assert.equal(positional.second, 'b')
-    })
-
-    it('allows null arguments', () => {
-      class Positional extends ValueObject.define('value') {}
-
-      const positional = new Positional(null)
-      assert.equal(positional.value, null)
-    })
-
-    it('does not allow undefined arguments', () => {
-      class Positional extends ValueObject.define('ok', 'ko') {}
-
-      assertThrows(
-        () => new Positional('yep', undefined),
-        'Positional(ok, ko) called with undefined for ko'
-      )
-    })
-
-    it('fails when instantiated with wrong number of arguments', () => {
-      class WantsThreeArgs extends ValueObject.define('a', 'b', 'c') {}
-
-      assertThrows(
-        () => new WantsThreeArgs('A', 'B'),
-        'WantsThreeArgs(a, b, c) called with 2 arguments'
-      )
-    })
-
-    it('can be serialized', () => {
-      class Positional extends ValueObject.define('first', 'second') {}
-
-      const deserialize = ValueObject.deserializeForNamespaces([{ Positional }])
-
-      const positional = new Positional('a', 'b')
-      const serialized = JSON.stringify(positional)
-      const deserialized = deserialize(serialized)
-      assert.equal(deserialized.constructor, Positional)
-      assert.equal(deserialized.first, 'a')
-      assert.equal(deserialized.second, 'b')
-    })
-  })
-
   context('with named properties', () => {
     it('sets its properties to the constructor arguments', () => {
       class Named extends ValueObject.define({ a: 'string', b: 'string' }) {}
