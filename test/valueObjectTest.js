@@ -135,6 +135,13 @@ describe(ValueObject.name, () => {
     assert.equal(foo.c, false)
   })
 
+  it('sets object properties', () => {
+    class Foo extends ValueObject.define({ a: 'object' }) {}
+    const a = { what: 'ever' }
+    const foo = new Foo({ a })
+    assert.equal(foo.a, a)
+  })
+
   it('fails for primitive type when instantiated with the wrong type', () => {
     class Foo extends ValueObject.define({ a: 'string', b: 'string' }) {}
 
@@ -248,7 +255,6 @@ describe(ValueObject.name, () => {
         'Expected an array to contain a single type element.'
       )
     })
-
 
     it('can be serialized', () => {
       class Foo extends ValueObject.define({ x: 'number', y: 'string' }) {}

@@ -81,6 +81,8 @@ module.exports = class Schema {
       )
     } else if (typeof value === 'object' && typeof typeDefinition === 'function') {
       valid = value instanceof typeDefinition
+    } else if (typeDefinition === 'object') {
+      valid = typeof expected !== 'undefined'
     } else {
       valid = expected === actual
     }
