@@ -80,11 +80,11 @@ describe(ValueObject.name, () => {
     })
 
     it('does not allow undefined arguments', () => {
-      class Named extends ValueObject.define({ ok: 'string', ko: ['string'] }) {}
+      class Named extends ValueObject.define({ a: 'string', b: 'string' }) {}
 
       assertThrows(
-        () => new Named({ ok: 'yep', ko: undefined }),
-        'Named({ok:string, ko:[string]}) called with wrong types {ok:string, ko:undefined}'
+        () => new Named({ a: 'yep', b: undefined }),
+        'Named({a:string, b:string}) called with invalid types {a:string, b:undefined} - "b" is invalid'
       )
     })
 
@@ -112,7 +112,7 @@ describe(ValueObject.name, () => {
       )
     })
 
-    it('fails when instantiated without values for each property', () => {
+    it('fails when instantiated without a value for every property', () => {
       class WantsThreeProps extends ValueObject.define({ c: 'string', a: 'string', b: 'string' }) {}
       const a = 'A'
       const b = 'B'
@@ -142,7 +142,7 @@ describe(ValueObject.name, () => {
       const b = 3
       assertThrows(
         () => new Named({ b, a }),
-        'Named({b:string, a:string}) called with wrong types {b:number, a:string}'
+        'Named({b:string, a:string}) called with invalid types {b:number, a:string} - "b" is invalid'
       )
     })
 
@@ -161,7 +161,20 @@ describe(ValueObject.name, () => {
       assertThrows(
         () => new Named({ b, a, c, d }),
         'Named({b:instanceof Child, a:string, c:string, d:boolean}) ' +
-        'called with wrong types {b:instanceof WrongChild, a:string, c:null, d:boolean}'
+        'called with invalid types {b:instanceof WrongChild, a:string, c:null, d:boolean} - "b" is invalid'
+      )
+    })
+
+    it('fails for multiple invalid types with error explaining which properties', () => {
+      class X {}
+      const a = 666
+      const b = new Date()
+      class Named extends ValueObject.define({ a: 'string', b: X }) {
+      }
+      assertThrows(
+        () => new Named({ a, b }),
+        'Named({a:string, b:instanceof X}) ' +
+        'called with invalid types {a:number, b:instanceof Date} - "a" is invalid, "b" is invalid'
       )
     })
 

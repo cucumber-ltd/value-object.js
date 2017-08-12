@@ -37,7 +37,8 @@ module.exports = class Schema {
     if (typeErrors.length > 0) {
       const expected = typeCheckResults.map(tc => `${tc.propertyName}:${tc.expected}`).join(', ')
       const actual = typeCheckResults.map(tc => `${tc.propertyName}:${tc.actual}`).join(', ')
-      throw new TypeError(`${valueObject.constructor.name}({${expected}}) called with wrong types {${actual}}`)
+      const propertySummary = typeErrors.map(t => `"${t.propertyName}" is invalid`).join(', ')
+      throw new TypeError(`${valueObject.constructor.name}({${expected}}) called with invalid types {${actual}} - ${propertySummary}`)
     }
   }
 
