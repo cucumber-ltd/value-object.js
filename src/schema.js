@@ -46,14 +46,14 @@ module.exports = class Schema {
     if (typeof typeDefinition === 'function') {
       expected = `instanceof ${typeDefinition.name}`
     } else if (Array.isArray(typeDefinition)) {
-      expected = `[${typeof typeDefinition[0] === 'function' ? 'instanceof '+typeDefinition[0].name : typeDefinition[0]}]`
+      expected = `[${typeof typeDefinition[0] === 'function' ? 'instanceof '+ typeDefinition[0].name : typeDefinition[0]}]`
     } else {
       expected = typeDefinition
     }
 
     let actual
     if (Array.isArray(value)) {
-      const typesOfElements = Array.from(new Set(value.map(v => typeof v === 'object' ? 'instanceof '+v.constructor.name : typeof v)))
+      const typesOfElements = Array.from(new Set(value.map(v => typeof v === 'object' ? 'instanceof '+ v.constructor.name : typeof v)))
       if (typesOfElements.length === 1) {
         actual = `[${typesOfElements[0]}]`
       } else {
@@ -72,8 +72,12 @@ module.exports = class Schema {
     let valid
     if (value === null) {
       valid = true
-    } else if (Array.isArray(value) && Array.isArray(typeDefinition) && typeof typeDefinition[0] === 'function') {
-      valid = value.every(v => v instanceof typeDefinition[0])
+    } else if (Array.isArray(value) && Array.isArray(typeDefinition)) {
+      valid = value.length === 0 || (
+        typeof typeDefinition[0] === 'function' && value.every(v => v instanceof typeDefinition[0])
+      ) || (
+        typeof typeDefinition[0] === 'string' && value.every(v => typeof v === typeDefinition[0])
+      )
     } else if (typeof value === 'object' && typeof typeDefinition === 'function') {
       valid = value instanceof typeDefinition
     } else {

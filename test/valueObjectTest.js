@@ -185,10 +185,16 @@ describe(ValueObject.name, () => {
     })
 
     context('with array values', function() {
-      it('can be instantiated with an array of primitives of certain type', () => {
+      it('can be instantiated with an array of primitive type', () => {
         class NamedWithArray extends ValueObject.define({ codes: ['number'] }) {}
         const thing = new NamedWithArray({ codes: [2, 3] })
         assert.deepEqual(thing.codes, [2, 3])
+      })
+
+      it('can be instantiated with an empty array of primitives', () => {
+        class NamedWithArray extends ValueObject.define({ codes: ['number'] }) {}
+        const thing = new NamedWithArray({ codes: [] })
+        assert.deepEqual(thing.codes, [])
       })
 
       it('can be instantiated with an array of instances of a class', () => {
