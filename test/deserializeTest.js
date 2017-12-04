@@ -55,4 +55,23 @@ describe(ValueObject.deserializeForNamespaces.name, () => {
       )
     })
   })
+
+  describe('ValueObject.fromJSON(serializedProperties)', () => {
+    it('creates an instance of the ValueObject from the serialized properties', () => {
+      class ExampleValueObject extends ValueObject.define({
+        date1: Date,
+        date2: Date,
+        string1: 'string',
+        string2: 'string'
+      }) {}
+      const props = {
+        date1: new Date('2001-01-01'),
+        date2: null,
+        string1: 'lollipop',
+        string2: null
+      }
+      const object = ExampleValueObject.fromJSON(props)
+      assert.deepEqual(object, props)
+    })
+  })
 })

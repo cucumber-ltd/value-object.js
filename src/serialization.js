@@ -19,7 +19,7 @@ module.exports = class Serialization {
     const args = Object.assign({}, raw)
     delete args.__type__
     for (const propertyName in properties) {
-      if (properties[propertyName] == Date) {
+      if (properties[propertyName] == Date && args[propertyName] !== null) {
         args[propertyName] = new Date(args[propertyName])
       }
     }
