@@ -75,12 +75,12 @@ module.exports = class Schema {
       valid = true
     } else if (Array.isArray(value) && Array.isArray(typeDefinition)) {
       valid = value.length === 0 || (
-        typeof typeDefinition[0] === 'function' && value.every(v => v instanceof typeDefinition[0])
+        typeof typeDefinition[0] === 'function' && value.every(v => Schema.objectCanConvertToType(v, typeDefinition[0]))
       ) || (
         typeof typeDefinition[0] === 'string' && value.every(v => typeof v === typeDefinition[0])
       )
     } else if (typeof value === 'object' && typeof typeDefinition === 'function') {
-      valid = value instanceof typeDefinition
+      valid = Schema.objectCanConvertToType(value, typeDefinition)
     } else if (typeDefinition === 'object') {
       valid = typeof expected !== 'undefined'
     } else {
@@ -92,6 +92,22 @@ module.exports = class Schema {
       actual,
       expected,
       propertyName
+    }
+  }
+
+  static objectCanConvertToType(value, typeDefinition) {
+    return value instanceof typeDefinition || Schema.objectCanDeserializeAsType(value, typeDefinition)
+  }
+
+  static objectCanDeserializeAsType(value, typeDefinition) {
+    if (typeof value !== 'object' || !('fromJSON' in typeDefinition)) {
+      return false
+    }
+    try {
+      typeDefinition.fromJSON(value)
+      return true
+    } catch (_) {
+      return false
     }
   }
 

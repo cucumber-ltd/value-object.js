@@ -27,7 +27,9 @@ module.exports = class Serialization {
   }
 
   static serializeValue(value) {
-    return value instanceof Date ? value.toISOString() : value
+    return value instanceof Date
+      ? value.toISOString()
+      : typeof value === "object" && "toJSON" in value ? value.toJSON() : value
   }
 
   static deserializeForNamespaces(namespaces) {

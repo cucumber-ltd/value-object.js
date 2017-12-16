@@ -75,3 +75,32 @@ describe(ValueObject.deserializeForNamespaces.name, () => {
     })
   })
 })
+
+describe('ValueObject.fromJSON()', () => {
+  it("Creates ValueObject instances from nested values without __type__ annotations", () => {
+    class B extends ValueObject.define({
+      o: 'string'
+    }) {}
+    class A extends ValueObject.define({
+      x: 'string',
+      y: B
+    }) {}
+    const props = { x: '123', y: { o: '2' } }
+    const object = A.fromJSON(props)
+    assert.deepEqual(object, props)
+  })
+
+  it("Creates ValueObject instances from nested values with array properties without __type__ annotations", () => {
+    class B extends ValueObject.define({
+      o: 'string'
+    }) {}
+    class A extends ValueObject.define({
+      x: 'string',
+      y: B,
+      z: [B]
+    }) {}
+    const props = { x: '123', y: { o: '2' }, z: [{ o: '3' }, { o: '4' }] }
+    const object = A.fromJSON(props)
+    assert.deepEqual(object, props)
+  })
+})
