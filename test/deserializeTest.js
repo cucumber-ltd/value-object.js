@@ -88,6 +88,8 @@ describe('ValueObject.fromJSON()', () => {
     const props = { x: '123', y: { o: '2' } }
     const object = A.fromJSON(props)
     assert.deepEqual(object, props)
+    assert.equal(object.constructor, A)
+    assert.equal(object.y.constructor, B)
   })
 
   it("Creates ValueObject instances from nested values with array properties without __type__ annotations", () => {
@@ -102,5 +104,9 @@ describe('ValueObject.fromJSON()', () => {
     const props = { x: '123', y: { o: '2' }, z: [{ o: '3' }, { o: '4' }] }
     const object = A.fromJSON(props)
     assert.deepEqual(object, props)
+    assert.equal(object.constructor, A)
+    assert.equal(object.y.constructor, B)
+    assert.equal(object.z[0].constructor, B)
+    assert.equal(object.z[1].constructor, B)
   })
 })

@@ -19,8 +19,14 @@ module.exports = class Serialization {
     const args = Object.assign({}, raw)
     delete args.__type__
     for (const propertyName in properties) {
-      if (properties[propertyName] == Date && args[propertyName] !== null) {
-        args[propertyName] = new Date(args[propertyName])
+      const arg = args[propertyName]
+      const property = properties[propertyName]
+      if (property == Date && arg !== null) {
+        args[propertyName] = new Date(arg)
+      } else if (typeof property == 'function' && typeof property.fromJSON == 'function') {
+        args[propertyName] = property.fromJSON(arg)
+      } else if (Array.isArray(property) && typeof property[0].fromJSON == 'function') {
+        args[propertyName] = arg.map(element => property[0].fromJSON(element))
       }
     }
     return new ValueObject(args)
