@@ -3,24 +3,18 @@
 
 const assert = require('assert')
 const assertThrows = require('./assertThrows')
-const ValueObject = require('../valueObject')
+const ValueObject = require('..')
 
-describe(ValueObject.deserializeForNamespaces.name, () => {
-  it('Builds a deserialize function that can turn a JSON representation of an object', () => {
+describe('ValueObject.deserializeForNamespaces([{}, {}])', () => {
+  it('Builds a deserialize function', () => {
     class Foo {
-      constructor(bar) {
+      constructor({ bar }) {
         this.bar = bar
-      }
-      static fromJSON(json) {
-        return new Foo(json.bar)
       }
     }
     class Bar {
-      constructor(baz) {
+      constructor({ baz }) {
         this.baz = baz
-      }
-      static fromJSON(json) {
-        return new Bar(json.baz)
       }
     }
     const deserialize = ValueObject.deserializeForNamespaces([{ Foo, Bar }])
@@ -45,38 +39,10 @@ describe(ValueObject.deserializeForNamespaces.name, () => {
         'Unable to deserialize an object with type "Junk". Make sure you register that constructor when building deserialize.'
       )
     })
-
-    it('throws when a the type has no static toJSON method', () => {
-      class Bad {}
-      const deserialize = ValueObject.deserializeForNamespaces([{ Bad }])
-      assertThrows(() => deserialize(
-        '{ "__type__": "Bad" }'),
-        'Unable to deserialize an object with type "Bad". Deserializable types must have a static fromJSON method.'
-      )
-    })
-  })
-
-  describe('ValueObject.fromJSON(serializedProperties)', () => {
-    it('creates an instance of the ValueObject from the serialized properties', () => {
-      class ExampleValueObject extends ValueObject.define({
-        date1: Date,
-        date2: Date,
-        string1: 'string',
-        string2: 'string'
-      }) {}
-      const props = {
-        date1: new Date('2001-01-01'),
-        date2: null,
-        string1: 'lollipop',
-        string2: null
-      }
-      const object = ExampleValueObject.fromJSON(props)
-      assert.deepEqual(object, props)
-    })
   })
 })
 
-describe('ValueObject.fromJSON()', () => {
+describe('new ValueObject()', () => {
   it("Creates ValueObject instances from nested values without __type__ annotations", () => {
     class B extends ValueObject.define({
       o: 'string'
@@ -86,7 +52,7 @@ describe('ValueObject.fromJSON()', () => {
       y: B
     }) {}
     const props = { x: '123', y: { o: '2' } }
-    const object = A.fromJSON(props)
+    const object = new A(props)
     assert.deepEqual(object, props)
     assert.equal(object.constructor, A)
     assert.equal(object.y.constructor, B)
@@ -102,7 +68,7 @@ describe('ValueObject.fromJSON()', () => {
       z: [B]
     }) {}
     const props = { x: '123', y: { o: '2' }, z: [{ o: '3' }, { o: '4' }] }
-    const object = A.fromJSON(props)
+    const object = new A(props)
     assert.deepEqual(object, props)
     assert.equal(object.constructor, A)
     assert.equal(object.y.constructor, B)

@@ -29,6 +29,15 @@ class Money extends ValueObject.define({
 }) {}
 ```
 
+...or don't use classes, if you prefer:
+
+```js
+var Money = ValueObject.define({
+  amount: 'number',
+  currency: { code: 'string' }
+})
+```
+
 ## Instantiating value objects
 
 Use the `new` keyword:
@@ -36,6 +45,7 @@ Use the `new` keyword:
 ```js
 const gbp = new Currency({ code: 'GBP', name: 'British Pounds' })
 const price = new Money({ currency: gbp, amount: 12.34 })
+const other = new Money({ currency: { code: 'USD', name: 'US Dollars' }, amount: 14.56 })
 ```
 
 The type constraints prevent value objects from being instantiated with
@@ -46,10 +56,10 @@ new Currency({ code: 'USD', name: 123 })
 // => TypeError: Currency({code:string, name:string}) called with wrong types {code:string, name:number}
 
 new Currency({ code: 'NZD', name: 'New Zealand Dollars', colour: 'All black' })
-// => TypeError: Currency({code, name}) called with {code, name, colour}
+// => TypeError: Currency({code:string, name:string}) called with {code, name, colour}
 
 new Money({ amount: 123 })
-// => TypeError: Money({currency, amount}) called with {amount}
+// => TypeError: Money({currency:Currency, amount:number}) called with {amount}
 ```
 
 ## Equality
@@ -109,7 +119,7 @@ JSON.stringify(gbp.toJSON())
 ## Converting value objects from JSON
 
 Use `ValueObject.deserializeForNamespaces()` to create a deserialize function
-that can turn the resulting JSON back into objects
+that can turn the resulting JSON string back into objects
 
 ```js
 const deserialize = ValueObject.deserializeForNamespaces([{ Currency }])

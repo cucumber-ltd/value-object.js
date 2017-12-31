@@ -2,7 +2,7 @@
 "use strict"
 
 const assert = require("assert")
-const ValueObject = require("../valueObject")
+const ValueObject = require('..')
 
 describe("ValueObject#toJSON()", () => {
   it("Is used by JSON.stringify() to create a nested anonymous object with __type__ members", () => {

@@ -3,205 +3,357 @@
 
 const assert = require('assert')
 const assertThrows = require('./assertThrows')
-const ValueObject = require('../valueObject')
+const ValueObject = require('..')
 
 describe(ValueObject.name, () => {
 
-  it('sets its properties to the constructor arguments', () => {
-    class Foo extends ValueObject.define({ a: 'string', b: 'string' }) {}
+  describe('.define(definition)', () => {
+    it('defines a complex type', () => {
+      const Money = ValueObject.define({ amount: 'number', currency: { code: 'string' } })
+      const allowance = new Money({ amount: 123, currency: { code: 'GBP' } })
+      assert.equal('GBP', allowance.currency.code)
+    })
 
-    const a = 'A'
-    const b = 'B'
-    const foo = new Foo({ b, a })
-    assert.equal(foo.a, 'A')
-    assert.equal(foo.b, 'B')
+    it('does not allow defining properties as numbers', () => {
+      assertThrows(
+        () => ValueObject.define({ x: 666 }),
+        "Property defined as unsupported type (number)"
+      )
+    })
+
+    it('does not allow calling define on ValueObject subclasses', () => {
+      class MyValueObject extends ValueObject {}
+      assertThrows(
+        () => MyValueObject.define({ year: 'number' }),
+        'ValueObject.define() cannot be called on subclasses'
+      )
+    })
   })
 
-  it('is equal to another value object with the same property values', () => {
-    class Thing extends ValueObject.define({ foo: 'number' }) {}
-    class Code extends ValueObject.define({ name: 'string' }) {}
-    class Foo extends ValueObject.define({ prop1: 'string', prop2: Thing, codes: [Code] }) {}
-    const foo1 = new Foo({ prop1: 'dave', prop2: new Thing({ foo: 2 }), codes: [new Code({ name: 'red' })] })
-    const foo2 = new Foo({ prop1: 'dave', prop2: new Thing({ foo: 2 }), codes: [new Code({ name: 'red' })] })
-    assert(foo1.isEqualTo(foo2))
+  describe('#constructor(properties)', () => {
+    it('sets its properties to the constructor arguments', () => {
+      class Foo extends ValueObject.define({ a: 'string', b: 'string' }) {}
+
+      const a = 'A'
+      const b = 'B'
+      const foo = new Foo({ b, a })
+      assert.equal(foo.a, 'A')
+      assert.equal(foo.b, 'B')
+    })
+
+    it('sets properties of nested types to the nested constructor arguments', () => {
+      const Foo = ValueObject.define({ x: { y: { z: 'string' } } })
+      const foo = new Foo({ x: { y: { z: 'golly' } } })
+      assert.equal(foo.x.y.z, 'golly')
+    })
+
+    it('allows null property values', () => {
+      class X {}
+      class Foo extends ValueObject.define({
+        text: 'string',
+        truthy: 'boolean',
+        numeric: 'number',
+        list: ['number'],
+        x: X,
+        y: { x: 'string' }
+      }) {}
+
+      const foo = new Foo({ text: null, truthy: null, numeric: null, list: null, x: null, y: null })
+      assert.strictEqual(foo.text, null)
+      assert.strictEqual(foo.truthy, null)
+      assert.strictEqual(foo.numeric, null)
+      assert.strictEqual(foo.list, null)
+      assert.strictEqual(foo.x, null)
+      assert.strictEqual(foo.y, null)
+    })
+
+    it('does not allow undefined arguments', () => {
+      class Foo extends ValueObject.define({ a: 'string', b: 'string' }) {}
+
+      assertThrows(
+        () => new Foo({ a: 'yep', b: undefined }),
+        'Foo({a:string, b:string}) called with invalid types {a:string, b:undefined} - "b" is invalid (Expected string)'
+      )
+    })
+
+    it('fails when instantiated with zero arguments', () => {
+      class Foo extends ValueObject.define({ b: 'string', a: ['string'] }) {}
+      assertThrows(
+        () => new Foo(),
+        'Foo({b:string, a:[string]}) called with 0 arguments'
+      )
+    })
+
+    it('fails when instantiated with more than one argument', () => {
+      class Foo extends ValueObject.define({ b: 'string', a: 'string' }) {}
+      assertThrows(
+        () => new Foo({ a: 'ok' }, null),
+        'Foo({b:string, a:string}) called with 2 arguments'
+      )
+    })
+
+    it('fails when instantiated without a value for every property', () => {
+      class WantsThreeProps extends ValueObject.define({ c: 'string', a: 'string', b: 'string' }) {}
+      const a = 'A'
+      const b = 'B'
+      const d = 'D'
+      assertThrows(
+        () => new WantsThreeProps({ a, d, b }),
+        'WantsThreeProps({c:string, a:string, b:string}) called with {a, d, b}'
+      )
+    })
+
+    it('fails when instantiated without a value for every nested property', () => {
+      class WantsNestedProps extends ValueObject.define({ x: { y: 'string' } }) {}
+      assertThrows(
+        () => new WantsNestedProps({ x: {} }),
+        'WantsNestedProps({x:{y:string}}) called with invalid types {x:instanceof Object} - ' +
+        '"x" is invalid (Struct({y:string}) called with {})'
+      )
+    })
+
+    it('sets properties with different primitive types', () => {
+      class Foo extends ValueObject.define({ a: 'string', b: 'number', c: 'boolean' }) {}
+
+      const a = 'A'
+      const b = 3
+      const c = false
+      const foo = new Foo({ b, a, c })
+      assert.equal(foo.a, 'A')
+      assert.equal(foo.b, 3)
+      assert.equal(foo.c, false)
+    })
+
+    it('sets object properties', () => {
+      class Foo extends ValueObject.define({ a: 'object' }) {}
+      const a = { what: 'ever' }
+      const foo = new Foo({ a })
+      assert.equal(foo.a, a)
+    })
+
+    it('fails for primitive type when instantiated with the wrong type', () => {
+      class Foo extends ValueObject.define({ a: 'number', b: 'string' }) {}
+
+      const a = 'A'
+      const b = 3
+      assertThrows(
+        () => new Foo({ b, a }),
+        'Foo({a:number, b:string}) called with invalid types {a:string, b:number} - '+
+        '"a" is invalid (Expected number), "b" is invalid (Expected string)'
+      )
+    })
+
+    it('fails for class type when instantiated with the wrong type', () => {
+      class WrongChild {
+      }
+      class Child {
+      }
+      class Foo extends ValueObject.define({ a: 'string', b: Child, c: 'string', d: 'boolean' }) {
+      }
+
+      const a = 'A'
+      const b = new WrongChild()
+      const c = null
+      const d = false
+      assertThrows(
+        () => new Foo({ b, a, c, d }),
+        'Foo({a:string, b:instanceof Child, c:string, d:boolean}) ' +
+        'called with invalid types {a:string, b:instanceof WrongChild, c:null, d:boolean} - '+
+        '"b" is invalid (Expected instanceof Child)'
+      )
+    })
+
+    it('fails for multiple invalid types with error explaining which properties', () => {
+      class X {}
+      const a = 666
+      const b = new Date()
+      const c = -1
+      class Foo extends ValueObject.define({ a: 'string', b: X, c: 'object' }) {
+      }
+      assertThrows(
+        () => new Foo({ a, b, c }),
+        'Foo({a:string, b:instanceof X, c:object}) ' +
+        'called with invalid types {a:number, b:instanceof Date, c:number} - ' +
+        '"a" is invalid (Expected string), "b" is invalid (Expected instanceof X), "c" is invalid (Expected object)'
+      )
+    })
+
+    it('can be instantiated with a class child', () => {
+      class Child {}
+      class Parent extends ValueObject.define({ child: Child }) {}
+
+      const child = new Child()
+      const parent = new Parent({ child })
+      assert.deepStrictEqual(parent.child, child)
+    })
+
+    it('can be instantiated with a subclass of a class child', () => {
+      class Child {}
+      class Grandchild extends Child {}
+      class Parent extends ValueObject.define({ child: Child }) {}
+
+      const grandchild = new Grandchild()
+      const parent = new Parent({ child: grandchild })
+      assert.deepStrictEqual(parent.child, grandchild)
+    })
   })
 
-  it('is not equal to another value object of different type with the same property values', () => {
-    class Foo extends ValueObject.define({ prop1: 'string' }) {}
-    class Bar extends ValueObject.define({ prop1: 'string' }) {}
-    assert(!new Foo({ prop1: 'dave' }).isEqualTo(new Bar({ prop1: 'dave' })))
+  describe('#isEqualTo(other)', () => {
+    it('is equal to another value object with the equal property values', () => {
+      class Thing extends ValueObject.define({ foo: 'number' }) {}
+      class Code extends ValueObject.define({ name: 'string' }) {}
+      class Foo extends ValueObject.define({ prop1: 'string', prop2: Thing, codes: [Code] }) {}
+      const foo1 = new Foo({ prop1: 'dave', prop2: new Thing({ foo: 2 }), codes: [new Code({ name: 'red' })] })
+      const foo2 = new Foo({ prop1: 'dave', prop2: new Thing({ foo: 2 }), codes: [new Code({ name: 'red' })] })
+      assert(foo1.isEqualTo(foo2))
+    })
+
+    it('is not equal to another value object of different type with equal property values', () => {
+      class Foo extends ValueObject.define({ prop1: 'string' }) {}
+      class Bar extends ValueObject.define({ prop1: 'string' }) {}
+      assert(!new Foo({ prop1: 'dave' }).isEqualTo(new Bar({ prop1: 'dave' })))
+    })
+
+    it('is equal to another value object with equal string property values', () => {
+      class Foo extends ValueObject.define({ prop1: 'string' }) {}
+      assert(new Foo({ prop1: 'ok' }).isEqualTo(new Foo({ prop1: 'ok' })))
+    })
+
+    it('is not equal to another value object with different string property values', () => {
+      class Foo extends ValueObject.define({ prop1: 'string' }) {}
+      assert(!new Foo({ prop1: 'bob' }).isEqualTo(new Foo({ prop1: 'andy' })))
+    })
+
+    it('is equal to another value object with equal boolean property values', () => {
+      class Foo extends ValueObject.define({ prop1: 'boolean' }) {}
+      assert(new Foo({ prop1: true }).isEqualTo(new Foo({ prop1: true })))
+    })
+
+    it('is not equal to another value object with different boolean property values', () => {
+      class Foo extends ValueObject.define({ prop1: 'boolean' }) {}
+      assert(!new Foo({ prop1: true }).isEqualTo(new Foo({ prop1: false })))
+    })
+
+    it('is equal to another value object with equal number property values', () => {
+      class Foo extends ValueObject.define({ prop1: 'number' }) {}
+      assert(new Foo({ prop1: 123 }).isEqualTo(new Foo({ prop1: 123.00 })))
+    })
+
+    it('is not equal to another value object with different number property values', () => {
+      class Foo extends ValueObject.define({ prop1: 'number' }) {}
+      assert(!new Foo({ prop1: 321 }).isEqualTo(new Foo({ prop1: 345 })))
+    })
+
+    it('is equal to another value object with equal object property values', () => {
+      class Foo extends ValueObject.define({ prop1: 'object' }) {}
+      assert(new Foo({ prop1: { x: 123 } }).isEqualTo(new Foo({ prop1: { x: 123 } })))
+    })
+
+    it('is not equal to another value object with different object property values', () => {
+      class Foo extends ValueObject.define({ prop1: 'object' }) {}
+      assert(!new Foo({ prop1: { x: 456 } }).isEqualTo(new Foo({ prop1: { x: 654 } })))
+    })
+
+    it('is not equal to another object', () => {
+      class Foo extends ValueObject.define({ prop1: 'string' }) {}
+      assert(!new Foo({ prop1: 'bob' }).isEqualTo({}))
+    })
+
+    it('is not equal to a primitive', () => {
+      class Foo extends ValueObject.define({ prop1: 'string' }) {}
+      assert(!new Foo({ prop1: 'bob' }).isEqualTo(67565))
+    })
+
+    it('is not equal to undefined', () => {
+      class Foo extends ValueObject.define({ prop1: 'string' }) {}
+      assert(!new Foo({ prop1: 'bob' }).isEqualTo(undefined))
+    })
+
+    it('is equal to another object with equal array elements', () => {
+      class Foo extends ValueObject.define({ a: ['number'] }) {}
+      assert(new Foo({ a: [1, 2] }).isEqualTo(new Foo({ a: [1, 2] })))
+    })
+
+    it('is not equal to another object with a different number of array elements', () => {
+      class Foo extends ValueObject.define({ a: ['number'] }) {}
+      assert(!new Foo({ a: [1] }).isEqualTo(new Foo({ a: [1, 2] })))
+    })
+
+    it('is not equal to another object with differently ordered array elements', () => {
+      class Foo extends ValueObject.define({ a: ['number'] }) {}
+      assert(!new Foo({ a: [2, 1] }).isEqualTo(new Foo({ a: [1, 2] })))
+    })
   })
 
-  it('is not equal to another value object with different property values', () => {
-    class Foo extends ValueObject.define({ prop1: 'string' }) {}
-    assert(!new Foo({ prop1: 'bob' }).isEqualTo(new Foo({ prop1: 'andy' })))
+  describe('mutability', () => {
+    it('does not allow setting new properties', () => {
+      class Foo extends ValueObject.define({ ok: 'string', ko: 'string' }) {}
+      const foo = new Foo({ ok: 'yep', ko: 'hey' })
+
+      assertThrows(
+        () => foo.dingbat = 'badger',
+        "Cannot add property dingbat, object is not extensible"
+      )
+    })
+
+    it('does not allow mutating existing properties', () => {
+      class Foo extends ValueObject.define({ ok: 'string', ko: 'string' }) {}
+      const foo = new Foo({ ok: 'yep', ko: 'hey' })
+
+      assertThrows(
+        () => foo.ok = 'badger',
+        "Cannot assign to read only property 'ok' of object '#<Foo>'"
+      )
+    })
+
+    it('allows additional processing before freezing its property values', () => {
+      class Special extends ValueObject.define({ x: 'number' }) {
+        _init() {
+          Object.defineProperty(this, 'y', {
+            value: 123,
+            enumerable: true,
+            writable: false
+          })
+        }
+      }
+      const special = new Special({ x: 0 })
+      assert.equal(special.y, 123)
+    })
   })
 
-  it('is not equal to another object', () => {
-    class Foo extends ValueObject.define({ prop1: 'string' }) {}
-    assert(!new Foo({ prop1: 'bob' }).isEqualTo({}))
-  })
+  describe('extending', () => {
+    it('can be subclassed', () => {
+      class Base extends ValueObject {}
+      Base.properties = { id: 'string', seq: 'number' }
 
-  it('is not equal to a primitive', () => {
-    class Foo extends ValueObject.define({ prop1: 'string' }) {}
-    assert(!new Foo({ prop1: 'bob' }).isEqualTo(67565))
-  })
+      class Sub extends Base {}
+      Sub.properties = { city: 'string', owner: 'string' }
 
-  it('is not equal to undefined', () => {
-    class Foo extends ValueObject.define({ prop1: 'string' }) {}
-    assert(!new Foo({ prop1: 'bob' }).isEqualTo(undefined))
-  })
+      new Sub({ id: 'xyz', seq: 4, city: 'London', owner: 'Aslak' })
+      assertThrows(
+        () => new Sub({ seq: 4, city: 'London', owner: 'Aslak' }),
+        'Sub({city:string, owner:string, id:string, seq:number}) called with {seq, city, owner}'
+      )
+    })
 
-  it('allows null arguments', () => {
-    class Foo extends ValueObject.define({ value: 'string', list: ['number'] }) {}
+    it('accepts new property type definitions', () => {
+      ValueObject.definePropertyType('money', {
+        coerce(value) {
+          const parts = value.split(' ')
+          return { amount: Number(parts[0]), currency: parts[1] }
+        },
 
-    const foo = new Foo({ value: null, list: null })
-    assert.equal(foo.value, null)
-  })
-
-  it('does not allow setting new properties', () => {
-    class Foo extends ValueObject.define({ ok: 'string', ko: 'string' }) {}
-    const foo = new Foo({ ok: 'yep', ko: 'hey' })
-
-    assertThrows(
-      () => foo.dingbat = 'badger',
-      "Cannot add property dingbat, object is not extensible"
-    )
-  })
-
-  it('does not allow mutating existing properties', () => {
-    class Foo extends ValueObject.define({ ok: 'string', ko: 'string' }) {}
-    const foo = new Foo({ ok: 'yep', ko: 'hey' })
-
-    assertThrows(
-      () => foo.ok = 'badger',
-      "Cannot assign to read only property 'ok' of object '#<Foo>'"
-    )
-  })
-
-  it('does not allow undefined arguments', () => {
-    class Foo extends ValueObject.define({ a: 'string', b: 'string' }) {}
-
-    assertThrows(
-      () => new Foo({ a: 'yep', b: undefined }),
-      'Foo({a:string, b:string}) called with invalid types {a:string, b:undefined} - "b" is invalid'
-    )
-  })
-
-  it('does not allow calling define on ValueObject subclasses', () => {
-    class MyValueObject extends ValueObject {}
-    assertThrows(
-      () => MyValueObject.define({ year: 'number' }),
-      'ValueObject.define() cannot be called on subclasses'
-    )
-  })
-
-  it('fails when instantiated with zero arguments', () => {
-    class Foo extends ValueObject.define({ b: 'string', a: ['string'] }) {}
-    assertThrows(
-      () => new Foo(),
-      'Foo({b, a}) called with 0 arguments'
-    )
-  })
-
-  it('fails when instantiated with more than one argument', () => {
-    class Foo extends ValueObject.define({ b: 'string', a: 'string' }) {}
-    assertThrows(
-      () => new Foo({ a: 'ok' }, null),
-      'Foo({b, a}) called with 2 arguments'
-    )
-  })
-
-  it('fails when instantiated without a value for every property', () => {
-    class WantsThreeProps extends ValueObject.define({ c: 'string', a: 'string', b: 'string' }) {}
-    const a = 'A'
-    const b = 'B'
-    const d = 'D'
-    assertThrows(
-      () => new WantsThreeProps({ a, d, b }),
-      'WantsThreeProps({c, a, b}) called with {a, d, b}'
-    )
-  })
-
-  it('sets properties with different primitive types', () => {
-    class Foo extends ValueObject.define({ a: 'string', b: 'number', c: 'boolean' }) {}
-
-    const a = 'A'
-    const b = 3
-    const c = false
-    const foo = new Foo({ b, a, c })
-    assert.equal(foo.a, 'A')
-    assert.equal(foo.b, 3)
-    assert.equal(foo.c, false)
-  })
-
-  it('sets object properties', () => {
-    class Foo extends ValueObject.define({ a: 'object' }) {}
-    const a = { what: 'ever' }
-    const foo = new Foo({ a })
-    assert.equal(foo.a, a)
-  })
-
-  it('fails for primitive type when instantiated with the wrong type', () => {
-    class Foo extends ValueObject.define({ a: 'string', b: 'string' }) {}
-
-    const a = 'A'
-    const b = 3
-    assertThrows(
-      () => new Foo({ b, a }),
-      'Foo({b:string, a:string}) called with invalid types {b:number, a:string} - "b" is invalid'
-    )
-  })
-
-  it('fails for class type when instantiated with the wrong type', () => {
-    class WrongChild {
-    }
-    class Child {
-    }
-    class Foo extends ValueObject.define({ a: 'string', b: Child, c: 'string', d: 'boolean' }) {
-    }
-
-    const a = 'A'
-    const b = new WrongChild()
-    const c = null
-    const d = false
-    assertThrows(
-      () => new Foo({ b, a, c, d }),
-      'Foo({b:instanceof Child, a:string, c:string, d:boolean}) ' +
-      'called with invalid types {b:instanceof WrongChild, a:string, c:null, d:boolean} - "b" is invalid'
-    )
-  })
-
-  it('fails for multiple invalid types with error explaining which properties', () => {
-    class X {}
-    const a = 666
-    const b = new Date()
-    class Foo extends ValueObject.define({ a: 'string', b: X }) {
-    }
-    assertThrows(
-      () => new Foo({ a, b }),
-      'Foo({a:string, b:instanceof X}) ' +
-      'called with invalid types {a:number, b:instanceof Date} - "a" is invalid, "b" is invalid'
-    )
-  })
-
-  it('can be instantiated with a class child', () => {
-    class Child {}
-    class Parent extends ValueObject.define({ child: Child }) {}
-
-    const child = new Child()
-    const parent = new Parent({ child })
-    assert.deepStrictEqual(parent.child, child)
-  })
-
-  it('can be instantiated with a subclass of a class child', () => {
-    class Child {}
-    class Grandchild extends Child {}
-    class Parent extends ValueObject.define({ child: Child }) {}
-
-    const grandchild = new Grandchild()
-    const parent = new Parent({ child: grandchild })
-    assert.deepStrictEqual(parent.child, grandchild)
+        areEqual(a, b) {
+          return a.currency == b.currency && a.amount == b.amount
+        }
+      })
+      const Allowance = ValueObject.define({ cash: 'money' })
+      const allowance = new Allowance({ cash: '123.00 GBP' })
+      assert.equal(allowance.cash.amount, 123)
+      assert.equal(allowance.cash.currency, 'GBP')
+      assert(allowance.isEqualTo(allowance))
+      assert(!allowance.isEqualTo(allowance.with({ cash: '321.00 GBP' })))
+    })
   })
 
   context('with array values', function() {
@@ -242,20 +394,30 @@ describe(ValueObject.name, () => {
       assert.deepStrictEqual(thing.children, children)
     })
 
+    it('fails when instantiated with a non-array value', function() {
+      class Foo extends ValueObject.define({ things: ['string'] }) {}
+      assertThrows(
+        () => new Foo({ things: 666 }),
+        'Foo({things:[string]}) called with invalid types {things:number} - "things" is invalid (Expected array)'
+      )
+    })
+
     it('fails if defined with empty array', function() {
       assertThrows(
         () => class FooWithEmptyArray extends ValueObject.define({ codes: [] }) {},
-        'Expected an array to contain a single type element.'
+        'Expected array property definition with single type element'
       )
     })
 
     it('fails if definition array has more than one element', function() {
       assertThrows(
         () => class FooWithEmptyArray extends ValueObject.define({ codes: ['string', Object] }) {},
-        'Expected an array to contain a single type element.'
+        'Expected array property definition with single type element'
       )
     })
+  })
 
+  describe('serialization', () => {
     it('can be serialized', () => {
       class Foo extends ValueObject.define({ x: 'number', y: 'string' }) {}
 
@@ -271,7 +433,7 @@ describe(ValueObject.name, () => {
       assert.equal(deserialized.y, 'banana')
     })
 
-    it('can be serialized with Date field', () => {
+    it('can be serialized with a Date property', () => {
       class Foo extends ValueObject.define({ date: Date }) {}
 
       const deserialize = ValueObject.deserializeForNamespaces([{ Foo }])
@@ -284,52 +446,39 @@ describe(ValueObject.name, () => {
       assert.equal(deserialized.constructor, Foo)
       assert.equal(deserialized.date.getTime(), date.getTime())
     })
+  })
 
-    it('can be extended', () => {
+  describe('#toJSON()', () => {
+    it('includes inherited properties', () => {
       class Base extends ValueObject {}
-      Base.properties = { id: 'string', seq: 'number' }
-
+      Base.properties = { propA: 'string' }
       class Sub extends Base {}
-      Sub.properties = { city: 'string', owner: 'string' }
+      Sub.properties = { propB: 'string' }
 
-      new Sub({ id: 'xyz', seq: 4, city: 'London', owner: 'Aslak' })
-      assertThrows(
-        () => new Sub({ seq: 4, city: 'London', owner: 'Aslak' }),
-        'Sub({city, owner, id, seq}) called with {seq, city, owner}'
-      )
+      const propA = 'AA'
+      const propB = 'BB'
+      const object = new Sub({ propA, propB })
+      const json = object.toJSON()
+      assert.deepEqual(json, { propA, propB, __type__: 'Sub' })
     })
 
-    it('allows additional processing before freezing its property values', () => {
-      class Special extends ValueObject.define({ x: 'number' }) {
-        _init() {
-          Object.defineProperty(this, 'y', {
-            value: 123,
-            enumerable: true,
-            writable: false
-          })
+    it('clones instances', () => {
+      class Foo {
+        constructor(x) {
+          this.x = x
         }
       }
-      const special = new Special({ x: 0 })
-      assert.equal(special.y, 123)
-    })
-
-    describe('.toJSON()', () => {
-      it('includes inherited properties', () => {
-        class Base extends ValueObject {}
-        Base.properties = { propA: 'string' }
-        class Sub extends Base {}
-        Sub.properties = { propB: 'string' }
-
-        const propA = 'AA'
-        const propB = 'BB'
-        const object = new Sub({ propA, propB })
-        const json = object.toJSON()
-        assert.deepEqual(json, { propA, propB, __type__: 'Sub' })
-      })
+      class Bar extends ValueObject.define({ foo: Foo }) {}
+      const foo = new Foo(666)
+      const bar = new Bar({ foo })
+      const json = bar.toJSON()
+      assert.equal(json.foo.x, 666)
+      json.foo.x = 888
+      assert.equal(foo.x, 666)
     })
   })
 
-  describe('.with(newPropertyValues)', () => {
+  describe('#with(newPropertyValues)', () => {
     it('creates a new value object overriding any stated values', () => {
       class MyValueObject extends ValueObject {}
       MyValueObject.properties = { propA: 'string', propB: 'number', propC: 'string' }
@@ -351,7 +500,7 @@ describe(ValueObject.name, () => {
     })
   })
 
-  describe('.validate()', () => {
+  describe('#validate()', () => {
     it('allows subclasses to add validation failures', () => {
       class Event extends ValueObject.define({ year: 'number' }) {
         addValidationFailures(failures) {
