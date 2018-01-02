@@ -476,6 +476,16 @@ describe(ValueObject.name, () => {
       json.foo.x = 888
       assert.equal(foo.x, 666)
     })
+
+    it('allows null values', () => {
+      class Bar extends ValueObject.define({ y: 'number' }) {}
+      class Foo extends ValueObject.define({ a: 'string', b: Bar, c: 'object', d: { x: 'number' } }) {}
+      const json = new Foo({ a: null, b: null, c: null, d: null }).toJSON()
+      assert.strictEqual(json.a, null)
+      assert.strictEqual(json.b, null)
+      assert.strictEqual(json.c, null)
+      assert.strictEqual(json.d, null)
+    })
   })
 
   describe('#with(newPropertyValues)', () => {

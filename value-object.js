@@ -221,6 +221,7 @@ Schema.prototype.areEqual = function(a, b) {
   return a.constructor.schema === b.constructor.schema
 }
 Schema.prototype.toJSON = function(instance) {
+  if (instance === null) return null
   var json = {}
   for (var propertyName in this.propertyTypes) {
     var property = this.propertyTypes[propertyName]
@@ -280,6 +281,7 @@ Ctor.prototype.describe = function() {
   return 'instanceof ' + this.ctor.name
 }
 Ctor.prototype.toJSON = function(instance) {
+  if (instance === null) return null
   return typeof instance.toJSON === 'function' ?
     instance.toJSON() : JSON.parse(JSON.stringify(instance))
 }
