@@ -266,7 +266,7 @@ Ctor.prototype.coerce = function(value) {
     if (this.ctor === Date && typeof value === 'string') {
       return new Date(value)
     }
-    if (value.constructor === Object) {
+    if (value && value.constructor === Object) {
       var Constructor = this.ctor
       return new Constructor(value)
     }

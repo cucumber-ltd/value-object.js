@@ -76,6 +76,17 @@ describe(ValueObject.name, () => {
       )
     })
 
+    it('does not allow undefined in nested constructor properties', () => {
+      class Baz extends ValueObject.define({ a: 'string' }) {}
+      class Bar extends ValueObject.define({ baz: Baz }) {}
+      class Foo extends ValueObject.define({ bar: Bar }) {}
+
+      assertThrows(
+        () => new Foo({ bar: new Bar({ baz: undefined }) }),
+        'Bar({baz:instanceof Baz}) called with invalid types {baz:undefined} - "baz" is invalid (Expected instanceof Baz)'
+      )
+    })
+
     it('fails when instantiated with zero arguments', () => {
       class Foo extends ValueObject.define({ b: 'string', a: ['string'] }) {}
       assertThrows(
