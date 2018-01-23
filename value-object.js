@@ -149,6 +149,10 @@ Schema.prototype.assignProperties = function(assignee, args) {
       '}) called with ' + args.length + ' arguments')
   }
   var values = args[0]
+  if (typeof values !== 'object') {
+    throw new Error(assignee.constructor.name + '({' + this.describePropertyTypes() +
+      '}) called with ' + inspectType(values) + ' (expected object)')
+  }
   if (!this.validateAssignedPropertyNames(values)) {
     throw new Error(assignee.constructor.name + '({' + this.describePropertyTypes() +
       '}) called with {' + keys(values).join(', ') + '}')
@@ -197,11 +201,7 @@ Schema.prototype.describePropertyValues = function(values) {
   var signature = []
   for (var propertyName in this.propertyTypes) {
     var value = values[propertyName]
-    var type = value === null ? 'null' : typeof value
-    if (type === 'object') {
-      type = 'instanceof ' + value.constructor.name
-    }
-    signature.push(propertyName + ':' + type)
+    signature.push(propertyName + ':' + inspectType(value))
   }
   return signature.join(', ')
 }
@@ -240,7 +240,7 @@ function ArrayProp(elementType) {
 }
 ArrayProp.prototype.coerce = function(value) {
   if (value === null) return null
-  if (!Array.isArray(value)) { throw new Error('Expected array') }
+  if (!Array.isArray(value)) { throw new Error('Expected array, was ' + inspectType(value)) }
   var elementType = this.elementType
   return value.map(function(element) {
     return elementType.coerce(element)
@@ -270,7 +270,7 @@ Ctor.prototype.coerce = function(value) {
       var Constructor = this.ctor
       return new Constructor(value)
     }
-    throw new Error('Expected instanceof ' + this.ctor.name)
+    throw new Error('Expected ' + this.ctor.name + ', was ' + inspectType(value))
   }
   return value
 }
@@ -278,7 +278,7 @@ Ctor.prototype.areEqual = function(a, b) {
   return this.ctor.schema.areEqual(a, b)
 }
 Ctor.prototype.describe = function() {
-  return 'instanceof ' + this.ctor.name
+  return this.ctor.name
 }
 Ctor.prototype.toJSON = function(instance) {
   if (instance === null) return null
@@ -292,7 +292,7 @@ function Primitive(cast) {
 }
 Primitive.prototype.coerce = function(value) {
   if (value === null) return null
-  if (typeof value !== this.name) throw new Error('Expected ' + this.name)
+  if (typeof value !== this.name) throw new Error('Expected ' + this.name + ', was ' + inspectType(value))
   return this.cast(value)
 }
 Primitive.prototype.areEqual = function(a, b) {
@@ -381,7 +381,7 @@ var keys = 'keys' in Object ? Object.keys : function(o) {
   return k;
 }
 
-var extend = function() {
+function extend() {
   var extended = {};
   for (var key in arguments) {
     var argument = arguments[key];
@@ -392,6 +392,13 @@ var extend = function() {
     }
   }
   return extended
+}
+
+function inspectType(o) {
+  if (o === null) return 'null'
+  var t = typeof o;
+  if (t !== 'object') return t;
+  return o.constructor.name === 'Object' ? 'object' : o.constructor.name
 }
 
 module.exports = ValueObject

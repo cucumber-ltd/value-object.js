@@ -72,7 +72,7 @@ describe(ValueObject.name, () => {
 
       assertThrows(
         () => new Foo({ a: 'yep', b: undefined }),
-        'Foo({a:string, b:string}) called with invalid types {a:string, b:undefined} - "b" is invalid (Expected string)'
+        'Foo({a:string, b:string}) called with invalid types {a:string, b:undefined} - "b" is invalid (Expected string, was undefined)'
       )
     })
 
@@ -83,7 +83,7 @@ describe(ValueObject.name, () => {
 
       assertThrows(
         () => new Foo({ bar: new Bar({ baz: undefined }) }),
-        'Bar({baz:instanceof Baz}) called with invalid types {baz:undefined} - "baz" is invalid (Expected instanceof Baz)'
+        'Bar({baz:Baz}) called with invalid types {baz:undefined} - "baz" is invalid (Expected Baz, was undefined)'
       )
     })
 
@@ -118,8 +118,17 @@ describe(ValueObject.name, () => {
       class WantsNestedProps extends ValueObject.define({ x: { y: 'string' } }) {}
       assertThrows(
         () => new WantsNestedProps({ x: {} }),
-        'WantsNestedProps({x:{y:string}}) called with invalid types {x:instanceof Object} - ' +
+        'WantsNestedProps({x:{y:string}}) called with invalid types {x:object} - ' +
         '"x" is invalid (Struct({y:string}) called with {})'
+      )
+    })
+
+    it('fails when instantiated without a string for nested value type property', () => {
+      class WantsNestedProps extends ValueObject.define({ x: { y: 'string' } }) {}
+      assertThrows(
+        () => new WantsNestedProps({ x: 'zomg' }),
+        'WantsNestedProps({x:{y:string}}) called with invalid types {x:string} - ' +
+        '"x" is invalid (Struct({y:string}) called with string (expected object))'
       )
     })
 
@@ -150,7 +159,7 @@ describe(ValueObject.name, () => {
       assertThrows(
         () => new Foo({ b, a }),
         'Foo({a:number, b:string}) called with invalid types {a:string, b:number} - '+
-        '"a" is invalid (Expected number), "b" is invalid (Expected string)'
+        '"a" is invalid (Expected number, was string), "b" is invalid (Expected string, was number)'
       )
     })
 
@@ -168,9 +177,9 @@ describe(ValueObject.name, () => {
       const d = false
       assertThrows(
         () => new Foo({ b, a, c, d }),
-        'Foo({a:string, b:instanceof Child, c:string, d:boolean}) ' +
-        'called with invalid types {a:string, b:instanceof WrongChild, c:null, d:boolean} - '+
-        '"b" is invalid (Expected instanceof Child)'
+        'Foo({a:string, b:Child, c:string, d:boolean}) ' +
+        'called with invalid types {a:string, b:WrongChild, c:null, d:boolean} - '+
+        '"b" is invalid (Expected Child, was WrongChild)'
       )
     })
 
@@ -183,9 +192,11 @@ describe(ValueObject.name, () => {
       }
       assertThrows(
         () => new Foo({ a, b, c }),
-        'Foo({a:string, b:instanceof X, c:object}) ' +
-        'called with invalid types {a:number, b:instanceof Date, c:number} - ' +
-        '"a" is invalid (Expected string), "b" is invalid (Expected instanceof X), "c" is invalid (Expected object)'
+        'Foo({a:string, b:X, c:object}) ' +
+        'called with invalid types {a:number, b:Date, c:number} - ' +
+        '"a" is invalid (Expected string, was number), ' +
+        '"b" is invalid (Expected X, was Date), ' +
+        '"c" is invalid (Expected object, was number)'
       )
     })
 
@@ -409,7 +420,8 @@ describe(ValueObject.name, () => {
       class Foo extends ValueObject.define({ things: ['string'] }) {}
       assertThrows(
         () => new Foo({ things: 666 }),
-        'Foo({things:[string]}) called with invalid types {things:number} - "things" is invalid (Expected array)'
+        'Foo({things:[string]}) called with invalid types {things:number} - ' +
+        '"things" is invalid (Expected array, was number)'
       )
     })
 
