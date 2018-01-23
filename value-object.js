@@ -266,8 +266,12 @@ Ctor.prototype.coerce = function(value) {
     if (this.ctor === Date && typeof value === 'string') {
       return new Date(value)
     }
+    var Constructor = this.ctor
+    if (typeof this.ctor.fromJSON === 'function') {
+      var properties = this.ctor.fromJSON(value)
+      return new Constructor(properties)
+    }
     if (value && value.constructor === Object) {
-      var Constructor = this.ctor
       return new Constructor(value)
     }
     throw new Error('Expected ' + this.ctor.name + ', was ' + inspectType(value))

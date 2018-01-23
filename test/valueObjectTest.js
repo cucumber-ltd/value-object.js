@@ -132,6 +132,42 @@ describe(ValueObject.name, () => {
       )
     })
 
+    it('allows nested types to be serialized as strings in JSON', () => {
+      class Foo extends ValueObject.define({ a: 'number' }) {
+        static fromJSON(json) {
+          return { a: Number(json) }
+        }
+
+        toJSON() {
+          return this.a.toString()
+        }
+      }
+      class Bar extends ValueObject.define({ x: { y: Foo } }) {}
+      const instance = new Bar({ x: { y: '123' } })
+      const json = JSON.stringify(instance.toJSON())
+      assert.equal(json, '{"x":{"y":"123","__type__":"Struct"},"__type__":"Bar"}')
+      const deserialized = new Bar(JSON.parse(json))
+      assert.equal(deserialized.x.y.a, 123)
+    })
+
+    it('allows nested types to be serialized as arbitrary objects in JSON', () => {
+      class Foo extends ValueObject.define({ a: 'number' }) {
+        static fromJSON(json) {
+          return { a: Number(json.zz) }
+        }
+
+        toJSON() {
+          return { zz: this.a }
+        }
+      }
+      class Bar extends ValueObject.define({ x: { y: Foo } }) {}
+      const instance = new Bar({ x: { y: new Foo({ a: 123 }) } })
+      const json = JSON.stringify(instance.toJSON())
+      assert.equal(json, '{"x":{"y":{"zz":123},"__type__":"Struct"},"__type__":"Bar"}')
+      const deserialized = new Bar(JSON.parse(json))
+      assert.equal(deserialized.x.y.a, 123)
+    })
+
     it('sets properties with different primitive types', () => {
       class Foo extends ValueObject.define({ a: 'string', b: 'number', c: 'boolean' }) {}
 
