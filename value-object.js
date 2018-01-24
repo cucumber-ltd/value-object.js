@@ -155,7 +155,8 @@ Schema.prototype.assignProperties = function(assignee, args) {
   }
   if (!this.validateAssignedPropertyNames(values)) {
     throw new Error(assignee.constructor.name + '({' + this.describePropertyTypes() +
-      '}) called with {' + keys(values).join(', ') + '}')
+      '}) called with {' + keys(values).join(', ') + '} ' +
+      '(' + diffKeys(this.propertyTypes, values) + ')')
   }
   var failures = []
   for (var propertyName in this.propertyTypes) {
@@ -383,6 +384,16 @@ var keys = 'keys' in Object ? Object.keys : function(o) {
     k.push(key)
   }
   return k;
+}
+
+function diffKeys(expected, actual) {
+  var expectedKeys = keys(expected).sort()
+  var actualKeys = keys(actual).sort()
+  var missingKeys = expectedKeys.filter(key => actualKeys.indexOf(key) == -1)
+  var extraKeys = actualKeys.filter(key => expectedKeys.indexOf(key) == -1)
+  return missingKeys.map(function (k) { return '"' + k + '" is missing' }).concat(
+    extraKeys.map(function (k) { return '"' + k + '" is unexpected' })
+  ).join(', ')
 }
 
 function extend() {

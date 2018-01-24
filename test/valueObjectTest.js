@@ -110,7 +110,7 @@ describe(ValueObject.name, () => {
       const d = 'D'
       assertThrows(
         () => new WantsThreeProps({ a, d, b }),
-        'WantsThreeProps({c:string, a:string, b:string}) called with {a, d, b}'
+        'WantsThreeProps({c:string, a:string, b:string}) called with {a, d, b} ("c" is missing, "d" is unexpected)'
       )
     })
 
@@ -119,7 +119,7 @@ describe(ValueObject.name, () => {
       assertThrows(
         () => new WantsNestedProps({ x: {} }),
         'WantsNestedProps({x:{y:string}}) called with invalid types {x:object} - ' +
-        '"x" is invalid (Struct({y:string}) called with {})'
+        '"x" is invalid (Struct({y:string}) called with {} ("y" is missing))'
       )
     })
 
@@ -390,7 +390,7 @@ describe(ValueObject.name, () => {
       new Sub({ id: 'xyz', seq: 4, city: 'London', owner: 'Aslak' })
       assertThrows(
         () => new Sub({ seq: 4, city: 'London', owner: 'Aslak' }),
-        'Sub({city:string, owner:string, id:string, seq:number}) called with {seq, city, owner}'
+        'Sub({city:string, owner:string, id:string, seq:number}) called with {seq, city, owner} ("id" is missing)'
       )
     })
 
