@@ -148,21 +148,22 @@ Schema.prototype.assignProperties = function(assignee, args) {
     throw new Error(assignee.constructor.name + '({' + this.describePropertyTypes() +
       '}) called with ' + args.length + ' arguments')
   }
-  var values = args[0]
-  if (typeof values !== 'object') {
+  var arg = args[0]
+  if (typeof arg !== 'object') {
     throw new Error(assignee.constructor.name + '({' + this.describePropertyTypes() +
-      '}) called with ' + inspectType(values) + ' (expected object)')
+      '}) called with ' + inspectType(arg) + ' (expected object)')
   }
-  if (!this.validateAssignedPropertyNames(values)) {
+  delete arg.__type__
+  if (!this.validateAssignedPropertyNames(arg)) {
     throw new Error(assignee.constructor.name + '({' + this.describePropertyTypes() +
-      '}) called with {' + keys(values).join(', ') + '} ' +
-      '(' + diffKeys(this.propertyTypes, values) + ')')
+      '}) called with {' + keys(arg).join(', ') + '} ' +
+      '(' + describeDiffereceInKeys(this.propertyTypes, arg) + ')')
   }
   var failures = []
   for (var propertyName in this.propertyTypes) {
     try {
       assignee[propertyName] = this.propertyTypes[propertyName].coerce(
-        values[propertyName]
+        arg[propertyName]
       )
     } catch (e) {
       failures.push({ propertyName: propertyName, error: e })
@@ -172,7 +173,7 @@ Schema.prototype.assignProperties = function(assignee, args) {
     throw new Error(
       assignee.constructor.name + '({' + this.describePropertyTypes()  +
         '}) called with invalid types {' +
-        this.describePropertyValues(values) + '} - ' +
+        this.describePropertyValues(arg) + '} - ' +
         failures.map(function(failure) {
           return '"' + failure.propertyName + '" is invalid (' + failure.error.message + ')'
         }).join(', ')
@@ -183,13 +184,12 @@ Schema.prototype.assignProperties = function(assignee, args) {
   }
   if ('freeze' in Object) Object.freeze(assignee)
 }
-Schema.prototype.validateAssignedPropertyNames = function(values) {
-  for (var propertyName in this.propertyTypes) {
-    if (!(propertyName in values)) {
-      return false
-    }
-  }
-  return true
+Schema.prototype.validateAssignedPropertyNames = function(assignedProperties) {
+  var schemaKeys = keys(this.propertyTypes)
+  var assignedKeys = keys(assignedProperties)
+  return schemaKeys.length === assignedKeys.length &&
+    schemaKeys.filter(key => assignedKeys.indexOf(key) == -1).length === 0 &&
+    assignedKeys.filter(key => schemaKeys.indexOf(key) == -1).length === 0
 }
 Schema.prototype.describePropertyTypes = function() {
   var signature = []
@@ -386,7 +386,7 @@ var keys = 'keys' in Object ? Object.keys : function(o) {
   return k;
 }
 
-function diffKeys(expected, actual) {
+function describeDiffereceInKeys(expected, actual) {
   var expectedKeys = keys(expected).sort()
   var actualKeys = keys(actual).sort()
   var missingKeys = expectedKeys.filter(key => actualKeys.indexOf(key) == -1)

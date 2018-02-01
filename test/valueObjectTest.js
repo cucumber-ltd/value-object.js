@@ -132,6 +132,15 @@ describe(ValueObject.name, () => {
       )
     })
 
+    it('fails when instantiated with unexpected properties', () => {
+      class WantsOneProp extends ValueObject.define({ a: 'string' }) {}
+      const a = 'A'
+      assertThrows(
+        () => new WantsOneProp({ a, b: '1', c: '2' }),
+        'WantsOneProp({a:string}) called with {a, b, c} ("b" is unexpected, "c" is unexpected)'
+      )
+    })
+
     it('allows nested types to be serialized as strings in JSON', () => {
       class Foo extends ValueObject.define({ a: 'number' }) {
         static fromJSON(json) {
