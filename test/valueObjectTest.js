@@ -177,6 +177,24 @@ describe(ValueObject.name, () => {
       assert.equal(deserialized.x.y.a, 123)
     })
 
+    it('allows nested types to be serialized as arbitrary objects in JSON without __type__ members', () => {
+      class Foo extends ValueObject.define({ a: 'number' }) {
+        static fromJSON(json) {
+          return { a: Number(json.zz) }
+        }
+
+        toJSON() {
+          return { zz: this.a }
+        }
+      }
+      class Bar extends ValueObject.define({ x: { y: Foo } }) {}
+      const instance = new Bar({ x: { y: new Foo({ a: 123 }) } })
+      const json = JSON.stringify(instance.toJSON({ typeNames: false }))
+      assert.equal(json, '{"x":{"y":{"zz":123}}}')
+      const deserialized = new Bar(JSON.parse(json))
+      assert.equal(deserialized.x.y.a, 123)
+    })
+
     it('sets properties with different primitive types', () => {
       class Foo extends ValueObject.define({ a: 'string', b: 'number', c: 'boolean' }) {}
 

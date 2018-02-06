@@ -75,8 +75,8 @@ ValueObject.prototype.with = function(newPropertyValues) {
   var Constructor = this.constructor
   return new Constructor(extend(this, newPropertyValues))
 }
-ValueObject.prototype.toJSON = function() {
-  return this.constructor.schema.toJSON(this)
+ValueObject.prototype.toJSON = function(options) {
+  return this.constructor.schema.toJSON(this, options)
 }
 ValueObject.prototype.validate = function() {
   var failures = new ValidationFailures()
@@ -221,15 +221,15 @@ Schema.prototype.areEqual = function(a, b) {
   }
   return a.constructor.schema === b.constructor.schema
 }
-Schema.prototype.toJSON = function(instance) {
+Schema.prototype.toJSON = function(instance, options) {
   if (instance === null) return null
   var json = {}
   for (var propertyName in this.propertyTypes) {
     var property = this.propertyTypes[propertyName]
     json[propertyName] = typeof property.toJSON === 'function' ?
-      property.toJSON(instance[propertyName]) : instance[propertyName]
+      property.toJSON(instance[propertyName], options) : instance[propertyName]
   }
-  json.__type__ = instance.constructor.name
+  if (!(options && options.typeNames === false)) json.__type__ = instance.constructor.name
   return json
 }
 Schema.prototype.describe = function() {
@@ -285,10 +285,10 @@ Ctor.prototype.areEqual = function(a, b) {
 Ctor.prototype.describe = function() {
   return this.ctor.name
 }
-Ctor.prototype.toJSON = function(instance) {
+Ctor.prototype.toJSON = function(instance, options) {
   if (instance === null) return null
   return typeof instance.toJSON === 'function' ?
-    instance.toJSON() : JSON.parse(JSON.stringify(instance))
+    instance.toJSON(options) : JSON.parse(JSON.stringify(instance))
 }
 
 function Primitive(cast) {
