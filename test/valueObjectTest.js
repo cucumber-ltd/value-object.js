@@ -88,6 +88,16 @@ describe(ValueObject.name, () => {
     )
   })
 
+  it('does not allow invalid dates', () => {
+    class Foo extends ValueObject.define({ date: Date }) {}
+    const date = new Date('2014-25-23') // Invalid date
+
+    assertThrows(
+      () => new Foo({ date }),
+      'Foo({date:instanceof Date}) called with invalid types {date:Date (Invalid Date)} - "date" is invalid'
+    )
+  })
+
   it('does not allow calling define on ValueObject subclasses', () => {
     class MyValueObject extends ValueObject {}
     assertThrows(

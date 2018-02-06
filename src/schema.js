@@ -60,6 +60,8 @@ module.exports = class Schema {
       } else {
         actual = `array of multiple types`
       }
+    } else if (value instanceof Date && !isFinite(value)) {
+      actual = 'Date (Invalid Date)'
     } else if (typeof value === 'object') {
       if (value === null) {
         actual = null
@@ -79,6 +81,8 @@ module.exports = class Schema {
       ) || (
         typeof typeDefinition[0] === 'string' && value.every(v => typeof v === typeDefinition[0])
       )
+    } else if (value instanceof Date && !isFinite(value)) {
+      valid = false
     } else if (typeof value === 'object' && typeof typeDefinition === 'function') {
       valid = value instanceof typeDefinition
     } else if (typeDefinition === 'object') {
