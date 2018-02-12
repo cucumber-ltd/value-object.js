@@ -188,8 +188,8 @@ Schema.prototype.validateAssignedPropertyNames = function(assignedProperties) {
   var schemaKeys = keys(this.propertyTypes)
   var assignedKeys = keys(assignedProperties)
   return schemaKeys.length === assignedKeys.length &&
-    schemaKeys.filter(key => assignedKeys.indexOf(key) == -1).length === 0 &&
-    assignedKeys.filter(key => schemaKeys.indexOf(key) == -1).length === 0
+    schemaKeys.filter(arrayIsMissing(assignedKeys)).length === 0 &&
+    assignedKeys.filter(arrayIsMissing(schemaKeys)).length === 0
 }
 Schema.prototype.describePropertyTypes = function() {
   var signature = []
@@ -389,11 +389,18 @@ var keys = 'keys' in Object ? Object.keys : function(o) {
 function describeDiffereceInKeys(expected, actual) {
   var expectedKeys = keys(expected).sort()
   var actualKeys = keys(actual).sort()
-  var missingKeys = expectedKeys.filter(key => actualKeys.indexOf(key) == -1)
-  var extraKeys = actualKeys.filter(key => expectedKeys.indexOf(key) == -1)
+  var missingKeys = expectedKeys.filter(arrayIsMissing(actualKeys))
+  var extraKeys = actualKeys.filter(arrayIsMissing(expectedKeys))
   return missingKeys.map(function (k) { return '"' + k + '" is missing' }).concat(
     extraKeys.map(function (k) { return '"' + k + '" is unexpected' })
   ).join(', ')
+}
+
+function arrayIsMissing(array) {
+  return function(item) {
+    for (var i = 0; i < array.length; i++) if (array[i] == item) return false;
+    return true
+  }
 }
 
 function extend() {
