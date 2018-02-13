@@ -141,6 +141,16 @@ describe(ValueObject.name, () => {
       )
     })
 
+    it('does not allow invalid dates', () => {
+      class Foo extends ValueObject.define({ date: Date }) {}
+      const date = new Date('2014-25-23') // Invalid date
+
+      assertThrows(
+        () => new Foo({ date }),
+        'Foo({date:Date}) called with invalid types {date:Date} - "date" is invalid (Invalid Date)'
+      )
+    })
+
     it('allows nested types to be serialized as strings in JSON', () => {
       class Foo extends ValueObject.define({ a: 'number' }) {
         static fromJSON(json) {

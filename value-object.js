@@ -277,6 +277,9 @@ Ctor.prototype.coerce = function(value) {
     }
     throw new Error('Expected ' + this.ctor.name + ', was ' + inspectType(value))
   }
+  if (this.ctor === Date && !isFinite(value)) {
+    throw new Error('Invalid Date')
+  }
   return value
 }
 Ctor.prototype.areEqual = function(a, b) {
