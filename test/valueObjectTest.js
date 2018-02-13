@@ -17,7 +17,8 @@ describe(ValueObject.name, () => {
     it('does not allow defining properties as numbers', () => {
       assertThrows(
         () => ValueObject.define({ x: 666 }),
-        "Property defined as unsupported type (number)"
+        "Property defined as unsupported type (number)",
+        error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
 
@@ -25,7 +26,8 @@ describe(ValueObject.name, () => {
       class MyValueObject extends ValueObject {}
       assertThrows(
         () => MyValueObject.define({ year: 'number' }),
-        'ValueObject.define() cannot be called on subclasses'
+        'ValueObject.define() cannot be called on subclasses',
+        error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
   })
@@ -72,7 +74,8 @@ describe(ValueObject.name, () => {
 
       assertThrows(
         () => new Foo({ a: 'yep', b: undefined }),
-        'Foo({a:string, b:string}) called with invalid types {a:string, b:undefined} - "b" is invalid (Expected string, was undefined)'
+        'Foo({a:string, b:string}) called with invalid types {a:string, b:undefined} - "b" is invalid (Expected string, was undefined)',
+        error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
 
@@ -83,7 +86,8 @@ describe(ValueObject.name, () => {
 
       assertThrows(
         () => new Foo({ bar: new Bar({ baz: undefined }) }),
-        'Bar({baz:Baz}) called with invalid types {baz:undefined} - "baz" is invalid (Expected Baz, was undefined)'
+        'Bar({baz:Baz}) called with invalid types {baz:undefined} - "baz" is invalid (Expected Baz, was undefined)',
+        error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
 
@@ -91,7 +95,8 @@ describe(ValueObject.name, () => {
       class Foo extends ValueObject.define({ b: 'string', a: ['string'] }) {}
       assertThrows(
         () => new Foo(),
-        'Foo({b:string, a:[string]}) called with 0 arguments'
+        'Foo({b:string, a:[string]}) called with 0 arguments',
+        error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
 
@@ -99,7 +104,8 @@ describe(ValueObject.name, () => {
       class Foo extends ValueObject.define({ b: 'string', a: 'string' }) {}
       assertThrows(
         () => new Foo({ a: 'ok' }, null),
-        'Foo({b:string, a:string}) called with 2 arguments'
+        'Foo({b:string, a:string}) called with 2 arguments',
+        error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
 
@@ -110,7 +116,8 @@ describe(ValueObject.name, () => {
       const d = 'D'
       assertThrows(
         () => new WantsThreeProps({ a, d, b }),
-        'WantsThreeProps({c:string, a:string, b:string}) called with {a, d, b} ("c" is missing, "d" is unexpected)'
+        'WantsThreeProps({c:string, a:string, b:string}) called with {a, d, b} ("c" is missing, "d" is unexpected)',
+        error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
 
@@ -119,7 +126,8 @@ describe(ValueObject.name, () => {
       assertThrows(
         () => new WantsNestedProps({ x: {} }),
         'WantsNestedProps({x:{y:string}}) called with invalid types {x:object} - ' +
-        '"x" is invalid (Struct({y:string}) called with {} ("y" is missing))'
+        '"x" is invalid (Struct({y:string}) called with {} ("y" is missing))',
+        error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
 
@@ -128,7 +136,8 @@ describe(ValueObject.name, () => {
       assertThrows(
         () => new WantsNestedProps({ x: 'zomg' }),
         'WantsNestedProps({x:{y:string}}) called with invalid types {x:string} - ' +
-        '"x" is invalid (Struct({y:string}) called with string (expected object))'
+        '"x" is invalid (Struct({y:string}) called with string (expected object))',
+        error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
 
@@ -137,7 +146,8 @@ describe(ValueObject.name, () => {
       const a = 'A'
       assertThrows(
         () => new WantsOneProp({ a, b: '1', c: '2' }),
-        'WantsOneProp({a:string}) called with {a, b, c} ("b" is unexpected, "c" is unexpected)'
+        'WantsOneProp({a:string}) called with {a, b, c} ("b" is unexpected, "c" is unexpected)',
+        error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
 
@@ -147,7 +157,8 @@ describe(ValueObject.name, () => {
 
       assertThrows(
         () => new Foo({ date }),
-        'Foo({date:Date}) called with invalid types {date:Date} - "date" is invalid (Invalid Date)'
+        'Foo({date:Date}) called with invalid types {date:Date} - "date" is invalid (Invalid Date)',
+        error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
 
@@ -232,7 +243,8 @@ describe(ValueObject.name, () => {
       assertThrows(
         () => new Foo({ b, a }),
         'Foo({a:number, b:string}) called with invalid types {a:string, b:number} - '+
-        '"a" is invalid (Expected number, was string), "b" is invalid (Expected string, was number)'
+        '"a" is invalid (Expected number, was string), "b" is invalid (Expected string, was number)',
+        error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
 
@@ -252,7 +264,8 @@ describe(ValueObject.name, () => {
         () => new Foo({ b, a, c, d }),
         'Foo({a:string, b:Child, c:string, d:boolean}) ' +
         'called with invalid types {a:string, b:WrongChild, c:null, d:boolean} - '+
-        '"b" is invalid (Expected Child, was WrongChild)'
+        '"b" is invalid (Expected Child, was WrongChild)',
+        error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
 
@@ -269,7 +282,8 @@ describe(ValueObject.name, () => {
         'called with invalid types {a:number, b:Date, c:number} - ' +
         '"a" is invalid (Expected string, was number), ' +
         '"b" is invalid (Expected X, was Date), ' +
-        '"c" is invalid (Expected object, was number)'
+        '"c" is invalid (Expected object, was number)',
+        error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
 
@@ -427,7 +441,8 @@ describe(ValueObject.name, () => {
       new Sub({ id: 'xyz', seq: 4, city: 'London', owner: 'Aslak' })
       assertThrows(
         () => new Sub({ seq: 4, city: 'London', owner: 'Aslak' }),
-        'Sub({city:string, owner:string, id:string, seq:number}) called with {seq, city, owner} ("id" is missing)'
+        'Sub({city:string, owner:string, id:string, seq:number}) called with {seq, city, owner} ("id" is missing)',
+        error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
 
@@ -494,21 +509,24 @@ describe(ValueObject.name, () => {
       assertThrows(
         () => new Foo({ things: 666 }),
         'Foo({things:[string]}) called with invalid types {things:number} - ' +
-        '"things" is invalid (Expected array, was number)'
+        '"things" is invalid (Expected array, was number)',
+        error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
 
     it('fails if defined with empty array', function() {
       assertThrows(
         () => class FooWithEmptyArray extends ValueObject.define({ codes: [] }) {},
-        'Expected array property definition with single type element'
+        'Expected array property definition with single type element',
+        error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
 
     it('fails if definition array has more than one element', function() {
       assertThrows(
         () => class FooWithEmptyArray extends ValueObject.define({ codes: ['string', Object] }) {},
-        'Expected array property definition with single type element'
+        'Expected array property definition with single type element',
+        error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
   })

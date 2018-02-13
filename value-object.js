@@ -33,7 +33,7 @@ ValueObject.findPropertyType = function(declared) {
     return ValueObject.propertyTypes[declared]
   } else if (Array.isArray(declared)) {
     if (declared.length != 1) {
-      throw new Error('Expected array property definition with single type element')
+      throw new ValueObjectError('Expected array property definition with single type element')
     }
     return new ArrayProp(
       ValueObject.findPropertyType(declared[0])
@@ -43,14 +43,14 @@ ValueObject.findPropertyType = function(declared) {
   } else if (typeof declared === "function") {
     return new Ctor(declared)
   } else {
-    throw new Error(
+    throw new ValueObjectError(
       "Property defined as unsupported type (" + typeof declared + ")"
     )
   }
 }
 ValueObject.define = function(properties) {
   if (this !== ValueObject && this !== global) {
-    throw new Error('ValueObject.define() cannot be called on subclasses')
+    throw new ValueObjectError('ValueObject.define() cannot be called on subclasses')
   }
   var DefinedValueObject = function() {
     this.constructor.schema.assignProperties(this, arguments)
@@ -91,7 +91,7 @@ ValueObject.prototype.addValidationFailures = function(/* failures */) {
 ValueObject.deserializeForNamespaces = function(namespaces) {
   var constructors = namespaces.reduce(function (ctors, namespace) {
     if (!namespace)
-      throw new Error('One of your namespaces is undefined.')
+      throw new ValueObjectError('One of your namespaces is undefined.')
 
     return extend(ctors, namespace)
   }, {})
@@ -104,7 +104,7 @@ ValueObject.deserializeForNamespaces = function(namespaces) {
     var constructor = constructors[value.__type__]
 
     if (!constructor)
-      throw new Error('Unable to deserialize an object with type "' + value.__type__ + '".' +
+      throw new ValueObjectError('Unable to deserialize an object with type "' + value.__type__ + '".' +
       " Make sure you register that constructor when building deserialize.")
 
     return new constructor(value)
@@ -145,17 +145,17 @@ Schema.prototype.createConstructor = function() {
 }
 Schema.prototype.assignProperties = function(assignee, args) {
   if (args.length != 1) {
-    throw new Error(assignee.constructor.name + '({' + this.describePropertyTypes() +
+    throw new ValueObjectError(assignee.constructor.name + '({' + this.describePropertyTypes() +
       '}) called with ' + args.length + ' arguments')
   }
   var arg = args[0]
   if (typeof arg !== 'object') {
-    throw new Error(assignee.constructor.name + '({' + this.describePropertyTypes() +
+    throw new ValueObjectError(assignee.constructor.name + '({' + this.describePropertyTypes() +
       '}) called with ' + inspectType(arg) + ' (expected object)')
   }
   delete arg.__type__
   if (!this.validateAssignedPropertyNames(arg)) {
-    throw new Error(assignee.constructor.name + '({' + this.describePropertyTypes() +
+    throw new ValueObjectError(assignee.constructor.name + '({' + this.describePropertyTypes() +
       '}) called with {' + keys(arg).join(', ') + '} ' +
       '(' + describeDiffereceInKeys(this.propertyTypes, arg) + ')')
   }
@@ -170,7 +170,7 @@ Schema.prototype.assignProperties = function(assignee, args) {
     }
   }
   if (failures.length > 0) {
-    throw new Error(
+    throw new ValueObjectError(
       assignee.constructor.name + '({' + this.describePropertyTypes()  +
         '}) called with invalid types {' +
         this.describePropertyValues(arg) + '} - ' +
@@ -241,7 +241,7 @@ function ArrayProp(elementType) {
 }
 ArrayProp.prototype.coerce = function(value) {
   if (value === null) return null
-  if (!Array.isArray(value)) { throw new Error('Expected array, was ' + inspectType(value)) }
+  if (!Array.isArray(value)) { throw new ValueObjectError('Expected array, was ' + inspectType(value)) }
   var elementType = this.elementType
   return value.map(function(element) {
     return elementType.coerce(element)
@@ -275,10 +275,10 @@ Ctor.prototype.coerce = function(value) {
     if (value && value.constructor === Object) {
       return new Constructor(value)
     }
-    throw new Error('Expected ' + this.ctor.name + ', was ' + inspectType(value))
+    throw new ValueObjectError('Expected ' + this.ctor.name + ', was ' + inspectType(value))
   }
   if (this.ctor === Date && !isFinite(value)) {
-    throw new Error('Invalid Date')
+    throw new ValueObjectError('Invalid Date')
   }
   return value
 }
@@ -300,7 +300,7 @@ function Primitive(cast) {
 }
 Primitive.prototype.coerce = function(value) {
   if (value === null) return null
-  if (typeof value !== this.name) throw new Error('Expected ' + this.name + ', was ' + inspectType(value))
+  if (typeof value !== this.name) throw new ValueObjectError('Expected ' + this.name + ', was ' + inspectType(value))
   return this.cast(value)
 }
 Primitive.prototype.areEqual = function(a, b) {
@@ -425,5 +425,13 @@ function inspectType(o) {
   if (t !== 'object') return t;
   return o.constructor.name === 'Object' ? 'object' : o.constructor.name
 }
+
+function ValueObjectError(message) {
+  this.name = 'ValueObjectError';
+  this.message = message;
+  this.stack = (new Error()).stack;
+}
+ValueObjectError.prototype = new Error;
+ValueObject.ValueObjectError = ValueObjectError
 
 module.exports = ValueObject
