@@ -645,4 +645,12 @@ describe(ValueObject.name, () => {
       )
     })
   })
+
+  describe('{ define } = require("value-object")', () => {
+    it('can define value objects', () => {
+      const { define } = ValueObject
+      const Foo = define({ x: "string" })
+      new Foo({ x: 'yeah' })
+    })
+  })
 })

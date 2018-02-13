@@ -49,7 +49,7 @@ ValueObject.findPropertyType = function(declared) {
   }
 }
 ValueObject.define = function(properties) {
-  if (this !== ValueObject) {
+  if (this !== ValueObject && this !== global) {
     throw new Error('ValueObject.define() cannot be called on subclasses')
   }
   var DefinedValueObject = function() {
