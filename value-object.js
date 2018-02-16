@@ -119,7 +119,7 @@ Scalar.prototype.valueOf = function() {
   return this.value
 }
 Scalar.prototype.inspect = function(_, options) {
-  return this.constructor.name + " { value: '" +
+  return functionName(this.constructor) + " { value: '" +
     (options.stylize ? options.stylize(this.value, 'string') : this.value) + "' }"
 }
 Scalar.prototype.uriEncoded = function() {
@@ -145,17 +145,17 @@ Schema.prototype.createConstructor = function() {
 }
 Schema.prototype.assignProperties = function(assignee, args) {
   if (args.length != 1) {
-    throw new ValueObjectError(assignee.constructor.name + '({' + this.describePropertyTypes() +
+    throw new ValueObjectError(functionName(assignee.constructor) + '({' + this.describePropertyTypes() +
       '}) called with ' + args.length + ' arguments')
   }
   var arg = args[0]
   if (typeof arg !== 'object') {
-    throw new ValueObjectError(assignee.constructor.name + '({' + this.describePropertyTypes() +
+    throw new ValueObjectError(functionName(assignee.constructor) + '({' + this.describePropertyTypes() +
       '}) called with ' + inspectType(arg) + ' (expected object)')
   }
   delete arg.__type__
   if (!this.validateAssignedPropertyNames(arg)) {
-    throw new ValueObjectError(assignee.constructor.name + '({' + this.describePropertyTypes() +
+    throw new ValueObjectError(functionName(assignee.constructor) + '({' + this.describePropertyTypes() +
       '}) called with {' + keys(arg).join(', ') + '} ' +
       '(' + describeDiffereceInKeys(this.propertyTypes, arg) + ')')
   }
@@ -171,7 +171,7 @@ Schema.prototype.assignProperties = function(assignee, args) {
   }
   if (failures.length > 0) {
     throw new ValueObjectError(
-      assignee.constructor.name + '({' + this.describePropertyTypes()  +
+      functionName(assignee.constructor) + '({' + this.describePropertyTypes()  +
         '}) called with invalid types {' +
         this.describePropertyValues(arg) + '} - ' +
         failures.map(function(failure) {
@@ -229,7 +229,7 @@ Schema.prototype.toJSON = function(instance, options) {
     json[propertyName] = typeof property.toJSON === 'function' ?
       property.toJSON(instance[propertyName], options) : instance[propertyName]
   }
-  if (!(options && options.typeNames === false)) json.__type__ = instance.constructor.name
+  if (!(options && options.typeNames === false && instance.constructor.name)) json.__type__ = instance.constructor.name
   return json
 }
 Schema.prototype.describe = function() {
@@ -275,7 +275,7 @@ Ctor.prototype.coerce = function(value) {
     if (value && value.constructor === Object) {
       return new Constructor(value)
     }
-    throw new ValueObjectError('Expected ' + this.ctor.name + ', was ' + inspectType(value))
+    throw new ValueObjectError('Expected ' + functionName(this.ctor) + ', was ' + inspectType(value))
   }
   if (this.ctor === Date && !isFinite(value)) {
     throw new ValueObjectError('Invalid Date')
@@ -286,7 +286,7 @@ Ctor.prototype.areEqual = function(a, b) {
   return this.ctor.schema.areEqual(a, b)
 }
 Ctor.prototype.describe = function() {
-  return this.ctor.name
+  return functionName(this.ctor)
 }
 Ctor.prototype.toJSON = function(instance, options) {
   if (instance === null) return null
@@ -294,9 +294,9 @@ Ctor.prototype.toJSON = function(instance, options) {
     instance.toJSON(options) : JSON.parse(JSON.stringify(instance))
 }
 
-function Primitive(cast) {
+function Primitive(cast, name) {
   this.cast = cast
-  this.name = cast.name.toLowerCase()
+  this.name = name
 }
 Primitive.prototype.coerce = function(value) {
   if (value === null) return null
@@ -310,16 +310,16 @@ Primitive.prototype.describe = function() {
   return this.name
 }
 
-function ObjectProp() { Primitive.call(this, Object) }
-ObjectProp.prototype = new Primitive(Object)
+function ObjectProp() { Primitive.call(this, Object, 'object') }
+ObjectProp.prototype = new Primitive(Object, 'object')
 ObjectProp.prototype.areEqual = function(a, b) {
   return JSON.stringify(a) === JSON.stringify(b)
 }
 
 ValueObject.propertyTypes = {
-  string: new Primitive(String),
-  number: new Primitive(Number),
-  boolean: new Primitive(Boolean),
+  string: new Primitive(String, 'string'),
+  number: new Primitive(Number, 'number'),
+  boolean: new Primitive(Boolean, 'boolean'),
   object: new ObjectProp()
 }
 
@@ -377,7 +377,7 @@ function ValidationError(object, failures) {
   Error.captureStackTrace(this, ValidationError)
   this.object = object
   this.failures = failures
-  this.message = object.constructor.name + ' is invalid: ' + failures.describe()
+  this.message = functionName(object.constructor) + ' is invalid: ' + failures.describe()
 }
 ValidationError.prototype = new Error()
 
@@ -423,7 +423,11 @@ function inspectType(o) {
   if (o === null) return 'null'
   var t = typeof o;
   if (t !== 'object') return t;
-  return o.constructor.name === 'Object' ? 'object' : o.constructor.name
+  return functionName(o.constructor) === 'Object' ? 'object' : functionName(o.constructor)
+}
+
+function functionName(fn) {
+  return fn.name || 'ValueObject'
 }
 
 function ValueObjectError(message) {
