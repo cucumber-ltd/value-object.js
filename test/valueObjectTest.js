@@ -5,7 +5,7 @@ const assert = require('assert')
 const assertThrows = require('./assertThrows')
 const ValueObject = require('..')
 
-describe(ValueObject.name, () => {
+describe('ValueObject', () => {
 
   describe('.define(definition)', () => {
     it('defines a complex type', () => {
