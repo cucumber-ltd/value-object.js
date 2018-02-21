@@ -49,24 +49,51 @@ describe('ValueObject', () => {
       assert.equal(foo.x.y.z, 'golly')
     })
 
-    it('allows null property values', () => {
+    it('does not allow null property values', () => {
       class X {}
       class Foo extends ValueObject.define({
-        text: 'string',
-        truthy: 'boolean',
-        numeric: 'number',
-        list: ['number'],
-        x: X,
-        y: { x: 'string' }
+        a: 'string',
+        b: 'boolean',
+        c: 'number',
+        d: ['number'],
+        e: X,
+        f: { g: 'string' }
       }) {}
 
-      const foo = new Foo({ text: null, truthy: null, numeric: null, list: null, x: null, y: null })
-      assert.strictEqual(foo.text, null)
-      assert.strictEqual(foo.truthy, null)
-      assert.strictEqual(foo.numeric, null)
-      assert.strictEqual(foo.list, null)
-      assert.strictEqual(foo.x, null)
-      assert.strictEqual(foo.y, null)
+      assertThrows(
+        () => new Foo({ a: null, b: null, c: null, d: null, e: null, f: null }),
+        'Foo({a:string, b:boolean, c:number, d:[number], e:X, f:{g:string}}) ' +
+        'called with invalid types {a:null, b:null, c:null, d:null, e:null, f:null} - ' +
+        '"a" is invalid (Expected string, was null), ' +
+        '"b" is invalid (Expected boolean, was null), ' +
+        '"c" is invalid (Expected number, was null), ' +
+        '"d" is invalid (Expected Array, was null), ' +
+        '"e" is invalid (Expected X, was null), ' +
+        '"f" is invalid (Expected ValueObject, was null)',
+        error => assert(error instanceof ValueObject.ValueObjectError)
+      )
+    })
+
+    it('allows null property values when explicitly allowed', () => {
+      class X {}
+      class Foo extends ValueObject.define({
+        a: 'string?',
+        b: 'boolean?',
+        c: 'number?',
+        d: ['number?'],
+        e: ValueObject.nullable(X),
+        f: { g: ValueObject.nullable('string') }
+      }) {}
+      const props = {
+        a: null,
+        b: null,
+        c: null,
+        d: [null],
+        e: null,
+        f: { g: null }
+      }
+      const foo = new Foo(props)
+      assert.deepEqual(foo, props)
     })
 
     it('does not allow undefined arguments', () => {
@@ -253,18 +280,15 @@ describe('ValueObject', () => {
       }
       class Child {
       }
-      class Foo extends ValueObject.define({ a: 'string', b: Child, c: 'string', d: 'boolean' }) {
+      class Foo extends ValueObject.define({ a: Child }) {
       }
 
-      const a = 'A'
-      const b = new WrongChild()
-      const c = null
-      const d = false
+      const a = new WrongChild()
       assertThrows(
-        () => new Foo({ b, a, c, d }),
-        'Foo({a:string, b:Child, c:string, d:boolean}) ' +
-        'called with invalid types {a:string, b:WrongChild, c:null, d:boolean} - '+
-        '"b" is invalid (Expected Child, was WrongChild)',
+        () => new Foo({ a }),
+        'Foo({a:Child}) ' +
+        'called with invalid types {a:WrongChild} - '+
+        '"a" is invalid (Expected Child, was WrongChild)',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
@@ -591,14 +615,14 @@ describe('ValueObject', () => {
       assert.equal(foo.x, 666)
     })
 
-    it('allows null values', () => {
+    it('serializes null values', () => {
       class Bar extends ValueObject.define({ y: 'number' }) {}
-      class Foo extends ValueObject.define({ a: 'string', b: Bar, c: 'object', d: { x: 'number' } }) {}
-      const json = new Foo({ a: null, b: null, c: null, d: null }).toJSON()
+      class Foo extends ValueObject.define({ a: 'string?', b: ValueObject.nullable(Bar), c: 'object?', d: { x: 'number?' } }) {}
+      const json = new Foo({ a: null, b: null, c: null, d: { x: null } }).toJSON()
       assert.strictEqual(json.a, null)
       assert.strictEqual(json.b, null)
       assert.strictEqual(json.c, null)
-      assert.strictEqual(json.d, null)
+      assert.strictEqual(json.d.x, null)
     })
   })
 

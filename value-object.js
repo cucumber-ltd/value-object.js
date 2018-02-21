@@ -15,7 +15,8 @@ ValueObject.mergePropertyTypes = function(constructor) {
 ValueObject.ensureSchema = function(constructor) {
   if (!constructor.schema) {
     constructor.schema = new Schema(
-      ValueObject.parseSchema(ValueObject.mergePropertyTypes(constructor))
+      ValueObject.parseSchema(ValueObject.mergePropertyTypes(constructor)),
+      functionName(constructor)
     )
   }
   return constructor.schema
@@ -29,6 +30,10 @@ ValueObject.parseSchema = function(definition) {
   return properties
 }
 ValueObject.findPropertyType = function(declared) {
+  if (declared.type && !!declared.nullable) {
+    var nullableProp = new Nullable(ValueObject.findPropertyType(declared.type))
+    return nullableProp
+  }
   if (typeof declared === "string") {
     return ValueObject.propertyTypes[declared]
   } else if (Array.isArray(declared)) {
@@ -39,7 +44,7 @@ ValueObject.findPropertyType = function(declared) {
       ValueObject.findPropertyType(declared[0])
     )
   } else if (typeof declared === "object") {
-    return new Schema(ValueObject.parseSchema(declared))
+    return new Schema(ValueObject.parseSchema(declared), functionName(declared))
   } else if (typeof declared === "function") {
     return new Ctor(declared)
   } else {
@@ -64,6 +69,12 @@ ValueObject.extend = function(Other, properties) {
     Other.prototype[key] = ValueObject.prototype[key]
   }
   Other.properties = properties
+}
+ValueObject.nullable = function(property) {
+  return {
+    type: property,
+    nullable: true
+  }
 }
 ValueObject.definePropertyType = function(name, definition) {
   ValueObject.propertyTypes[name] = definition
@@ -133,8 +144,9 @@ Scalar.prototype.queryEncoded = function() {
 }
 ValueObject.Scalar = Scalar
 
-function Schema(propertyTypes) {
+function Schema(propertyTypes, name) {
   this.propertyTypes = propertyTypes
+  this.name = name
 }
 Schema.prototype.createConstructor = function() {
   var schema = this
@@ -207,7 +219,7 @@ Schema.prototype.describePropertyValues = function(values) {
   return signature.join(', ')
 }
 Schema.prototype.coerce = function(value) {
-  if (value === null) return null
+  if (value === null) throw new Error('Expected ' + this.name + ', was ' + inspectType(value))
   var Constructor = this.createConstructor()
   return new Constructor(value)
 }
@@ -240,7 +252,7 @@ function ArrayProp(elementType) {
   this.elementType = elementType
 }
 ArrayProp.prototype.coerce = function(value) {
-  if (value === null) return null
+  if (value === null) throw new Error('Expected Array, was null')
   if (!Array.isArray(value)) { throw new ValueObjectError('Expected array, was ' + inspectType(value)) }
   var elementType = this.elementType
   return value.map(function(element) {
@@ -262,7 +274,7 @@ function Ctor(ctor) {
   this.ctor = ctor
 }
 Ctor.prototype.coerce = function(value) {
-  if (value === null) return null
+  if (value === null) throw new Error('Expected ' + functionName(this.ctor) + ', was null')
   if (!(value instanceof this.ctor)) {
     if (this.ctor === Date && typeof value === 'string') {
       return new Date(value)
@@ -299,8 +311,7 @@ function Primitive(cast, name) {
   this.name = name
 }
 Primitive.prototype.coerce = function(value) {
-  if (value === null) return null
-  if (typeof value !== this.name) throw new ValueObjectError('Expected ' + this.name + ', was ' + inspectType(value))
+  if (value === null || typeof value !== this.name) throw new ValueObjectError('Expected ' + this.name + ', was ' + inspectType(value))
   return this.cast(value)
 }
 Primitive.prototype.areEqual = function(a, b) {
@@ -316,11 +327,28 @@ ObjectProp.prototype.areEqual = function(a, b) {
   return JSON.stringify(a) === JSON.stringify(b)
 }
 
+function Nullable(prop) {
+  this.prop = prop
+}
+Nullable.prototype.coerce = function(value) {
+  if (value === null) return null
+  return this.prop.coerce(value)
+}
+Nullable.prototype.areEqual = function(a, b) {
+  return a === null && b === null || this.prop.areEqual(a, b)
+}
+Nullable.prototype.describe = function() {
+  return 'nullable<' + this.prop.describe() + '>'
+}
+
 ValueObject.propertyTypes = {
   string: new Primitive(String, 'string'),
   number: new Primitive(Number, 'number'),
   boolean: new Primitive(Boolean, 'boolean'),
   object: new ObjectProp()
+}
+for (var name in ValueObject.propertyTypes) {
+  ValueObject.propertyTypes[name + '?'] = new Nullable(ValueObject.propertyTypes[name])
 }
 
 function ValidationFailures() {
