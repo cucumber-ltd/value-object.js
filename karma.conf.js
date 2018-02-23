@@ -24,11 +24,20 @@ module.exports = function (config) {
     // preprocess matching files before serving them to the browser
     // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
     preprocessors: {
-      'test/*.js': ['babel', 'browserify']
+      'test/*.js': ['browserify']
     },
+	
+	babelPreprocessor: {
+      options: {
+        presets: ['@babel/preset-es2015']
+	  }
+	},
 
     browserify: {
-      debug: true
+      debug: true,
+	  transform: [
+        ['babelify', { presets: ['es2015'] }]
+      ]
     },
 
     // test results reporter to use

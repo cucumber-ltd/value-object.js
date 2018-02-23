@@ -4,7 +4,7 @@
 const assert = require('assert')
 const Scalar = require('..').Scalar
 
-describe(Scalar.name, () => {
+describe('Scalar', () => {
   it('can be constructed with a value', () => {
     class Name extends Scalar {}
     const name = new Name('Bobby')
