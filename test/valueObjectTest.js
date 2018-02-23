@@ -323,7 +323,7 @@ describe('ValueObject', () => {
       assert(!new Foo({ prop1: 'dave' }).isEqualTo(new Bar({ prop1: 'dave' })))
     })
 
-    it('is equal to another value object with equal string property values', () => {
+    it.only('is equal to another value object with equal string property values', () => {
       class Foo extends ValueObject.define({ prop1: 'string' }) {}
       assert(new Foo({ prop1: 'ok' }).isEqualTo(new Foo({ prop1: 'ok' })))
     })
@@ -462,7 +462,7 @@ describe('ValueObject', () => {
       assert.equal(allowance.cash.amount, 123)
       assert.equal(allowance.cash.currency, 'GBP')
       assert(allowance.isEqualTo(allowance))
-      assert(!allowance.isEqualTo(allowance.with({ cash: '321.00 GBP' })))
+      assert(!allowance.isEqualTo(allowance.withProperties({ cash: '321.00 GBP' })))
     })
   })
 
@@ -602,12 +602,12 @@ describe('ValueObject', () => {
     })
   })
 
-  describe('#with(newPropertyValues)', () => {
+  describe('#withProperties(newPropertyValues)', () => {
     it('creates a new value object overriding any stated values', () => {
       class MyValueObject extends ValueObject {}
       MyValueObject.properties = { propA: 'string', propB: 'number', propC: 'string' }
       const original = new MyValueObject({ propA: 'ZZ', propB: 123, propC: 'AA' })
-      const overriding = original.with({ propA: 'YY', propB: 666 })
+      const overriding = original.withProperties({ propA: 'YY', propB: 666 })
       assert.deepEqual(overriding, { propA: 'YY', propB: 666, propC: 'AA' })
     })
 
@@ -619,7 +619,7 @@ describe('ValueObject', () => {
 
       const date = new Date()
       const original = new Sub({ propA: 'ZZ', propB: 123, propC: 'AA', propD: 321, propE: date })
-      const overriding = original.with({ propA: 'YY', propD: 666 })
+      const overriding = original.withProperties({ propA: 'YY', propD: 666 })
       assert.deepEqual(overriding, { propA: 'YY', propB: 123, propC: 'AA', propD: 666, propE: date })
     })
   })
@@ -629,7 +629,7 @@ describe('ValueObject', () => {
       class Event extends ValueObject.define({ year: 'number' }) {
         addValidationFailures(failures) {
           if (this.year <= 0) {
-            failures.for('year').add('must be > 0')
+            failures.forProperty('year').add('must be > 0')
             failures.add('is invalid')
           }
         }
@@ -653,7 +653,7 @@ describe('ValueObject', () => {
       class Holiday extends ValueObject.define({ name: 'string' }) {
         addValidationFailures(failures) {
           failures.add('it should be happier')
-          failures.for('name').add('should be nicer')
+          failures.forProperty('name').add('should be nicer')
         }
       }
       const invalidHoliday = new Holiday({ name: 'Pancake Day' })

@@ -71,7 +71,7 @@ ValueObject.definePropertyType = function(name, definition) {
 ValueObject.prototype.isEqualTo = function(other) {
   return this.constructor.schema.areEqual(this, other)
 }
-ValueObject.prototype.with = function(newPropertyValues) {
+ValueObject.prototype.withProperties = function(newPropertyValues) {
   var Constructor = this.constructor
   return new Constructor(extend(this, newPropertyValues))
 }
@@ -327,7 +327,7 @@ function ValidationFailures() {
   this.failures = []
 }
 ValidationFailures.prototype = {
-  for: function(property) {
+  forProperty: function(property) {
     return new ValidationFailuresForProperty(this, property)
   },
 
