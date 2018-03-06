@@ -446,6 +446,16 @@ describe('ValueObject', () => {
       )
     })
 
+    it('can be extended with additional properties set as a static property of the subclass', () => {
+      class Superclass extends ValueObject.define({
+        x: 'string'
+      }) {}
+
+      class Subclass extends Superclass {}
+      Subclass.properties = { y: 'string' }
+      new Subclass({ x: '1', y: '2' })
+    })
+
     it('accepts new property type definitions', () => {
       ValueObject.definePropertyType('money', {
         coerce(value) {

@@ -4,7 +4,7 @@ function ValueObject() {
 }
 ValueObject.mergePropertyTypes = function(constructor) {
   var all = {}
-  while (typeof constructor.properties === "object") {
+  while (constructor) {
     for (var name in constructor.properties) {
       all[name] = constructor.properties[name]
     }
@@ -52,12 +52,12 @@ ValueObject.define = function(properties) {
   if (this !== ValueObject && this !== global) {
     throw new ValueObjectError('ValueObject.define() cannot be called on subclasses')
   }
-  var DefinedValueObject = function() {
-    this.constructor.schema.assignProperties(this, arguments)
+  ValueObject.parseSchema(properties)
+  function Definition() {
+    ValueObject.apply(this, arguments)
   }
-  ValueObject.extend(DefinedValueObject, properties)
-  ValueObject.ensureSchema(DefinedValueObject)
-  return DefinedValueObject
+  ValueObject.extend(Definition, properties)
+  return Definition
 }
 ValueObject.extend = function(Other, properties) {
   for (var key in ValueObject.prototype) {
