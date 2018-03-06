@@ -433,7 +433,7 @@ function functionName(fn) {
 function ValueObjectError(message) {
   this.name = 'ValueObjectError';
   this.message = message;
-  this.stack = (new Error()).stack;
+  this.stack = (new Error(message)).stack;
 }
 ValueObjectError.prototype = new Error;
 ValueObject.ValueObjectError = ValueObjectError
