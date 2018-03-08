@@ -392,6 +392,33 @@ describe('ValueObject', () => {
       class Foo extends ValueObject.define({ a: ['number'] }) {}
       assert(!new Foo({ a: [2, 1] }).isEqualTo(new Foo({ a: [1, 2] })))
     })
+
+    it('is equal to another object with untyped array with same values', () => {
+      class Foo extends ValueObject.define({ a: Array }) {}
+      assert(new Foo({ a: [2, 1] }).isEqualTo(new Foo({ a: [2, 1] })))
+    })
+
+    it('is not equal to another object with untyped array with different values', () => {
+      class Foo extends ValueObject.define({ a: Array }) {}
+      assert(!new Foo({ a: [2, 1] }).isEqualTo(new Foo({ a: [1, 2] })))
+    })
+
+    it('is equal to another object with untyped array with no elements', () => {
+      class Foo extends ValueObject.define({ a: Array }) {}
+      assert(new Foo({ a: [] }).isEqualTo(new Foo({ a: [] })))
+    })
+
+    it('is equal to another object with untyped array with equal value object elements', () => {
+      class Bar extends ValueObject.define({ b: 'string' }) {}
+      class Foo extends ValueObject.define({ a: Array }) {}
+      assert(new Foo({ a: [new Bar({ b: 'q' })] }).isEqualTo(new Foo({ a: [new Bar({ b: 'q' })] })))
+    })
+
+    it('is not equal to another object with untyped array with non-equal value object elements', () => {
+      class Bar extends ValueObject.define({ b: 'string' }) {}
+      class Foo extends ValueObject.define({ a: Array }) {}
+      assert(!new Foo({ a: [new Bar({ b: 'q' })] }).isEqualTo(new Foo({ a: [new Bar({ b: 'x' })] })))
+    })
   })
 
   describe('mutability', () => {
@@ -479,6 +506,12 @@ describe('ValueObject', () => {
   context('with array values', function() {
     it('can be instantiated with an array of primitive type', () => {
       class FooWithArray extends ValueObject.define({ codes: ['number'] }) {}
+      const thing = new FooWithArray({ codes: [2, 3] })
+      assert.deepEqual(thing.codes, [2, 3])
+    })
+
+    it('can be defined with Array type', () => {
+      class FooWithArray extends ValueObject.define({ codes: Array }) {}
       const thing = new FooWithArray({ codes: [2, 3] })
       assert.deepEqual(thing.codes, [2, 3])
     })

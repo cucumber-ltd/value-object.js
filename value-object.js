@@ -38,6 +38,8 @@ ValueObject.findPropertyType = function(declared) {
     return new ArrayProp(
       ValueObject.findPropertyType(declared[0])
     )
+  } else if (declared === Array) {
+    return new UntypedArrayProp()
   } else if (typeof declared === "object") {
     return new Schema(ValueObject.parseSchema(declared))
   } else if (typeof declared === "function") {
@@ -256,6 +258,25 @@ ArrayProp.prototype.areEqual = function(a, b) {
 }
 ArrayProp.prototype.describe = function() {
   return '[' + this.elementType.describe() + ']'
+}
+
+function UntypedArrayProp() {}
+UntypedArrayProp.prototype.coerce = function(value) {
+  if (value === null) return null
+  if (!Array.isArray(value)) { throw new ValueObjectError('Expected array, was ' + inspectType(value)) }
+  return value
+}
+UntypedArrayProp.prototype.areEqual = function(a, b) {
+  if (a.length != b.length) return false
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] !== b[i] && !(typeof a[i].isEqualTo === 'function' && a[i].isEqualTo(b[i]))) {
+      return false
+    }
+  }
+  return true
+}
+UntypedArrayProp.prototype.describe = function() {
+  return 'Array'
 }
 
 function Ctor(ctor) {
