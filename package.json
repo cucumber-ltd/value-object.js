@@ -28,6 +28,7 @@
     "@babel/core": "^7.0.0-beta.40",
     "@babel/preset-env": "^7.0.0-beta.40",
     "browserify": "^16.1.0",
+    "es6-error": "^4.1.1",
     "eslint": "^3.19.0",
     "eslint-config-eslint": "^4.0.0",
     "istanbul": "1.0.0-alpha.2",

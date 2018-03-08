@@ -39,6 +39,31 @@ describe('ValueObject.deserializeForNamespaces([{}, {}])', () => {
         'Unable to deserialize an object with type "Junk". Make sure you register that constructor when building deserialize.'
       )
     })
+
+    it('deserializes errors', () => {
+      const ExtendableError = require('es6-error')
+
+      class BaseError extends ExtendableError {
+        static fromJSON(obj) {
+          return new this(obj.message)
+        }
+
+        toJSON() {
+          return {
+            __type__: this.constructor.name,
+            message: this.message,
+          }
+        }
+      }
+
+      class FooError extends BaseError {}
+
+      const serializedError = JSON.stringify(new FooError('boom').toJSON())
+      const deserialize = ValueObject.deserializeForNamespaces([{ FooError }])
+      const deserializedError = deserialize(serializedError)
+      assert.equal(deserializedError.constructor, FooError)
+      assert.equal(deserializedError.message, 'boom')
+    })
   })
 })
 

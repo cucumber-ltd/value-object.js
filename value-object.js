@@ -109,6 +109,10 @@ ValueObject.deserializeForNamespaces = function(namespaces) {
       throw new ValueObjectError('Unable to deserialize an object with type "' + value.__type__ + '".' +
       " Make sure you register that constructor when building deserialize.")
 
+    if (typeof constructor.fromJSON === 'function') {
+      return constructor.fromJSON(value)
+    }
+
     return new constructor(value)
   }
 }
