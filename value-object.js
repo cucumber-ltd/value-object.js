@@ -1,8 +1,6 @@
 function ValueObject() {
-  if (arguments[0] !== ValueObject.prototype.with) {
-    ValueObject.ensureSchema(this.constructor)
-    this.constructor.schema.assignProperties(this, arguments)
-  }
+  ValueObject.ensureSchema(this.constructor)
+  this.constructor.schema.assignProperties(this, arguments)
 }
 ValueObject.mergePropertyTypes = function(constructor) {
   var all = {}
@@ -77,7 +75,13 @@ ValueObject.prototype.isEqualTo = function(other) {
 }
 ValueObject.prototype.with = function(newPropertyValues) {
   var Constructor = this.constructor
-  var instance = new Constructor(ValueObject.prototype.with)
+  if (!Constructor.With) {
+    Constructor.With = function With() {}
+    Constructor.With.prototype = Object.create(Constructor.prototype)
+    Constructor.With.prototype.constructor = Constructor
+  }
+
+  var instance = new Constructor.With()
   for (var propertyName in Constructor.schema.propertyTypes) {
     instance[propertyName] = this[propertyName]
   }
