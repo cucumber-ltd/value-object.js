@@ -665,6 +665,27 @@ describe('ValueObject', () => {
       const overriding = original.with({ propA: 'YY', propD: 666 })
       assert.deepEqual(overriding, { propA: 'YY', propB: 123, propC: 'AA', propD: 666, propE: date })
     })
+
+    it('overrides inherited properties twice', () => {
+      class Base extends ValueObject {}
+      Base.properties = { propA: 'string', propB: 'number', propE: Date }
+      class Sub extends Base {}
+      Sub.properties = { propC: 'string', propD: 'number' }
+
+      const date = new Date()
+      const original = new Sub({ propA: 'ZZ', propB: 123, propC: 'AA', propD: 321, propE: date })
+      const overriding = original.with({ propA: 'YY', propD: 666 }).with({ propD: 777, propE: null })
+      assert.deepEqual(overriding, { propA: 'YY', propB: 123, propC: 'AA', propD: 777, propE: null })
+    })
+
+    it('throws when told to override a non-existent property', () => {
+      class Hello extends ValueObject {}
+      Hello.properties = { x: 'string' }
+      assertThrows(
+        () => new Hello({ x: 'yo' }).with({ y: 'ok', z: 'good' }),
+        'Hello({x:string}) called with {y, z, x} ("y" is unexpected, "z" is unexpected)'
+      )
+    })
   })
 
   describe('#validate()', () => {
