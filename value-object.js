@@ -1,6 +1,8 @@
 function ValueObject() {
-  ValueObject.ensureSchema(this.constructor)
-  this.constructor.schema.assignProperties(this, arguments)
+  if (arguments[0] !== ValueObject.prototype.with) {
+    ValueObject.ensureSchema(this.constructor)
+    this.constructor.schema.assignProperties(this, arguments)
+  }
 }
 ValueObject.mergePropertyTypes = function(constructor) {
   var all = {}
@@ -43,7 +45,7 @@ ValueObject.findPropertyType = function(declared) {
   } else if (typeof declared === "object") {
     return new Schema(ValueObject.parseSchema(declared))
   } else if (typeof declared === "function") {
-    return new Ctor(declared)
+    return new ConstructorProp(declared)
   } else {
     throw new ValueObjectError(
       "Property defined as unsupported type (" + typeof declared + ")"
@@ -75,7 +77,26 @@ ValueObject.prototype.isEqualTo = function(other) {
 }
 ValueObject.prototype.with = function(newPropertyValues) {
   var Constructor = this.constructor
-  return new Constructor(extend(this, newPropertyValues))
+  var instance = new Constructor(ValueObject.prototype.with)
+  for (var propertyName in Constructor.schema.propertyTypes) {
+    instance[propertyName] = this[propertyName]
+  }
+  var valid = true
+  for (var newPropertyName in newPropertyValues) {
+    try {
+      instance[newPropertyName] = Constructor.schema.propertyTypes[newPropertyName].coerce(
+        newPropertyValues[newPropertyName]
+      )
+    } catch (e) {
+      valid = false
+      break
+    }
+  }
+  if (!valid) {
+    Constructor.schema.assignProperties(instance, [extend(newPropertyValues, this)])
+  }
+  freeze(instance)
+  return instance
 }
 ValueObject.prototype.toJSON = function() {
   return this.constructor.schema.toJSON(this)
@@ -144,6 +165,7 @@ ValueObject.Scalar = Scalar
 
 function Schema(propertyTypes) {
   this.propertyTypes = propertyTypes
+  this.propertyNames = keys(propertyTypes)
 }
 Schema.prototype.createConstructor = function() {
   function Struct() {
@@ -193,14 +215,16 @@ Schema.prototype.assignProperties = function(assignee, args) {
   if (typeof assignee._init === 'function') {
     assignee._init()
   }
-  if ('freeze' in Object) Object.freeze(assignee)
+  freeze(assignee)
 }
 Schema.prototype.validateAssignedPropertyNames = function(assignedProperties) {
-  var schemaKeys = keys(this.propertyTypes)
-  var assignedKeys = keys(assignedProperties)
-  return schemaKeys.length === assignedKeys.length &&
-    schemaKeys.filter(arrayIsMissing(assignedKeys)).length === 0 &&
-    assignedKeys.filter(arrayIsMissing(schemaKeys)).length === 0
+  for (var i = 0; i < this.propertyNames.length; i++) {
+    if (!(this.propertyNames[i] in assignedProperties)) return false
+  }
+  for (var j in assignedProperties) {
+    if (!this.propertyTypes[j]) return false
+  }
+  return true
 }
 Schema.prototype.describePropertyTypes = function() {
   var signature = []
@@ -319,10 +343,10 @@ UntypedArrayProp.prototype.toPlainObject = function(instance) {
   })
 }
 
-function Ctor(ctor) {
+function ConstructorProp(ctor) {
   this.ctor = ctor
 }
-Ctor.prototype.coerce = function(value) {
+ConstructorProp.prototype.coerce = function(value) {
   if (value === null) return null
   if (!(value instanceof this.ctor)) {
     if (this.ctor === Date && typeof value === 'string') {
@@ -343,13 +367,13 @@ Ctor.prototype.coerce = function(value) {
   }
   return value
 }
-Ctor.prototype.areEqual = function(a, b) {
+ConstructorProp.prototype.areEqual = function(a, b) {
   return this.ctor.schema.areEqual(a, b)
 }
-Ctor.prototype.describe = function() {
+ConstructorProp.prototype.describe = function() {
   return functionName(this.ctor)
 }
-Ctor.prototype.toJSON = function(instance) {
+ConstructorProp.prototype.toJSON = function(instance) {
   if (instance === null) return null
   return typeof instance.toJSON === 'function' ?
     instance.toJSON() : JSON.parse(JSON.stringify(instance))
@@ -498,5 +522,7 @@ function ValueObjectError(message) {
 }
 ValueObjectError.prototype = new Error;
 ValueObject.ValueObjectError = ValueObjectError
+
+var freeze = 'freeze' in Object ? Object.freeze : function() {}
 
 module.exports = ValueObject
