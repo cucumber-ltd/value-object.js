@@ -85,19 +85,14 @@ ValueObject.prototype.with = function(newPropertyValues) {
   for (var propertyName in Constructor.schema.propertyTypes) {
     instance[propertyName] = this[propertyName]
   }
-  var valid = true
   for (var newPropertyName in newPropertyValues) {
-    try {
-      instance[newPropertyName] = Constructor.schema.propertyTypes[newPropertyName].coerce(
-        newPropertyValues[newPropertyName]
-      )
-    } catch (e) {
-      valid = false
-      break
+    var property = Constructor.schema.propertyTypes[newPropertyName]
+    if (!property) {
+      Constructor.schema.assignProperties(instance, [extend(newPropertyValues, this)])
     }
-  }
-  if (!valid) {
-    Constructor.schema.assignProperties(instance, [extend(newPropertyValues, this)])
+    instance[newPropertyName] = property.coerce(
+      newPropertyValues[newPropertyName]
+    )
   }
   freeze(instance)
   return instance
@@ -222,11 +217,18 @@ Schema.prototype.assignProperties = function(assignee, args) {
   freeze(assignee)
 }
 Schema.prototype.validateAssignedPropertyNames = function(assignedProperties) {
-  for (var i = 0; i < this.propertyNames.length; i++) {
-    if (!(this.propertyNames[i] in assignedProperties)) return false
-  }
+  return this.areAllPropertyNamesAssigned(assignedProperties) &&
+    this.areAllAssignedPropertyNamesValid(assignedProperties)
+}
+Schema.prototype.areAllAssignedPropertyNamesValid = function(assignedProperties) {
   for (var j in assignedProperties) {
     if (!this.propertyTypes[j]) return false
+  }
+  return true
+}
+Schema.prototype.areAllPropertyNamesAssigned = function(assignedProperties) {
+  for (var i = 0; i < this.propertyNames.length; i++) {
+    if (!(this.propertyNames[i] in assignedProperties)) return false
   }
   return true
 }
