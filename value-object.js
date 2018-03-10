@@ -51,14 +51,14 @@ ValueObject.findPropertyType = function(declared) {
   }
 }
 ValueObject.define = function(properties) {
-  if (this !== ValueObject && this !== global) {
-    throw new ValueObjectError('ValueObject.define() cannot be called on subclasses')
-  }
   ValueObject.parseSchema(properties)
   function Definition() {
     ValueObject.apply(this, arguments)
   }
   ValueObject.extend(Definition, properties)
+  Definition.define = function(moreProperties) {
+    return ValueObject.define(extend(properties, moreProperties))
+  }
   return Definition
 }
 ValueObject.extend = function(Other, properties) {

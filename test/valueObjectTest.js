@@ -22,13 +22,12 @@ describe('ValueObject', () => {
       )
     })
 
-    it('does not allow calling define on ValueObject subclasses', () => {
-      class MyValueObject extends ValueObject {}
-      assertThrows(
-        () => MyValueObject.define({ year: 'number' }),
-        'ValueObject.define() cannot be called on subclasses',
-        error => assert(error instanceof ValueObject.ValueObjectError)
-      )
+    it('can be used to extend existing ValueObjects', () => {
+      class A extends ValueObject.define({ x: 'string' }) {}
+      class B extends A.define({ y: 'string' }) {}
+      const { x, y } = new B({ x: 'foo', y: 'bar' })
+      assert.equal(x, 'foo')
+      assert.equal(y, 'bar')
     })
   })
 
