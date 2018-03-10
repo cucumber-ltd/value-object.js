@@ -2,23 +2,22 @@ function ValueObject() {
   ValueObject.ensureSchema(this.constructor)
   this.constructor.schema.assignProperties(this, arguments)
 }
-ValueObject.mergePropertyTypes = function(constructor) {
+ValueObject.mergeProperties = function(constructor) {
   var all = {}
   while (constructor) {
     for (var name in constructor.properties) {
       all[name] = constructor.properties[name]
     }
-    constructor = 'getPrototypeOf' in Object && Object.getPrototypeOf(constructor)
+    constructor = Object.getPrototypeOf(constructor)
   }
   return all
 }
 ValueObject.ensureSchema = function(constructor) {
   if (!constructor.schema) {
     constructor.schema = new Schema(
-      ValueObject.parseSchema(ValueObject.mergePropertyTypes(constructor))
+      ValueObject.parseSchema(ValueObject.mergeProperties(constructor))
     )
   }
-  return constructor.schema
 }
 ValueObject.parseSchema = function(definition) {
   var properties = {}
@@ -390,6 +389,7 @@ function Primitive(cast, name) {
   this.name = name
 }
 Primitive.prototype.coerce = function(value) {
+  if (typeof value === this.name) return value
   if (value === null) return null
   if (typeof value !== this.name) throw new ValueObjectError('Expected ' + this.name + ', was ' + inspectType(value))
   return this.cast(value)
@@ -497,14 +497,16 @@ function arrayIsMissing(array) {
   }
 }
 
-function extend() {
-  var extended = {};
-  for (var key in arguments) {
-    var argument = arguments[key];
-    for (var prop in argument) {
-      if (Object.prototype.hasOwnProperty.call(argument, prop)) {
-        extended[prop] = argument[prop];
-      }
+function extend(extendee, extender) {
+  var extended = {}, prop
+  for (prop in extendee) {
+    if (Object.prototype.hasOwnProperty.call(extendee, prop)) {
+      extended[prop] = extendee[prop];
+    }
+  }
+  for (prop in extender) {
+    if (Object.prototype.hasOwnProperty.call(extender, prop)) {
+      extended[prop] = extender[prop];
     }
   }
   return extended
@@ -517,10 +519,6 @@ function inspectType(o) {
   return functionName(o.constructor) === 'Object' ? 'object' : functionName(o.constructor)
 }
 
-function functionName(fn) {
-  return fn.name || 'ValueObject'
-}
-
 function ValueObjectError(message) {
   this.name = 'ValueObjectError';
   this.message = message;
@@ -530,5 +528,6 @@ ValueObjectError.prototype = new Error;
 ValueObject.ValueObjectError = ValueObjectError
 
 var freeze = 'freeze' in Object ? Object.freeze : function() {}
+var functionName = ValueObject.name ? function(fn) { return fn.name } : function() { return 'ValueObject' }
 
 module.exports = ValueObject
