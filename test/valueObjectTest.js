@@ -703,7 +703,7 @@ describe('ValueObject', () => {
       assert.deepEqual(overriding, { propA: 'YY', propB: 123, propC: 'AA', propD: 777, propE: null })
     })
 
-    it('throws when told to override a non-existent property', () => {
+    it('throws when passed a non-existent property', () => {
       class Hello extends ValueObject {}
       Hello.properties = { x: 'string' }
       assertThrows(
