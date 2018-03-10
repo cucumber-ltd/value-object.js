@@ -58,6 +58,7 @@ ValueObject.define = function(properties) {
   Definition.define = function(moreProperties) {
     return ValueObject.define(extend(properties, moreProperties))
   }
+  ValueObject.ensureSchema(Definition)
   return Definition
 }
 ValueObject.extend = function(Other, properties) {

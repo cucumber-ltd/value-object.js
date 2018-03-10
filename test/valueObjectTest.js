@@ -8,10 +8,21 @@ const ValueObject = require('..')
 describe('ValueObject', () => {
 
   describe('.define(definition)', () => {
-    it('defines a complex type', () => {
+    it('defines simple types', () => {
+      const Currency = ValueObject.define({ code: 'string' })
+      const gbp = new Currency({ code: 'GBP' })
+      assert.equal('GBP', gbp.code)
+    })
+
+    it('defines types with nested anonymous types', () => {
       const Money = ValueObject.define({ amount: 'number', currency: { code: 'string' } })
       const allowance = new Money({ amount: 123, currency: { code: 'GBP' } })
       assert.equal('GBP', allowance.currency.code)
+    })
+
+    it('returns a constructor with a schema property', () => {
+      const Foo = ValueObject.define({ x: 'string' })
+      assert.deepEqual(Foo.schema.propertyNames, ['x'])
     })
 
     it('does not allow defining properties as numbers', () => {
@@ -466,16 +477,6 @@ describe('ValueObject', () => {
       )
     })
 
-    it('can be extended with additional properties set as a static property of the subclass', () => {
-      class Superclass extends ValueObject.define({
-        x: 'string'
-      }) {}
-
-      class Subclass extends Superclass {}
-      Subclass.properties = { y: 'string' }
-      new Subclass({ x: '1', y: '2' })
-    })
-
     it('accepts new property type definitions', () => {
       ValueObject.definePropertyType('money', {
         coerce(value) {
@@ -716,6 +717,20 @@ describe('ValueObject', () => {
         () => new Hello({ x: 'yo' }).with({ y: 'ok', z: 'good' }),
         'Hello({x:string}) called with {x, y, z} ("y" is unexpected, "z" is unexpected)'
       )
+    })
+
+    it('returns instances of the original type', () => {
+      class Yo extends ValueObject {}
+      Yo.properties = { x: 'string' }
+      const yo = new Yo({ x: '1' }).with({ x: '2' })
+      assert.equal(yo.constructor, Yo)
+    })
+
+    it('returns instances with schemas', () => {
+      class Yo extends ValueObject {}
+      Yo.properties = { x: 'string' }
+      const yo = new Yo({ x: '1' }).with({ x: '2' })
+      assert.deepEqual(yo.constructor.schema.propertyNames, ['x'])
     })
   })
 
