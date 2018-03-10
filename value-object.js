@@ -87,7 +87,7 @@ ValueObject.prototype.with = function(newPropertyValues) {
   for (var newPropertyName in newPropertyValues) {
     var property = Constructor.schema.propertyTypes[newPropertyName]
     if (!property) {
-      Constructor.schema.assignProperties(instance, [extend(newPropertyValues, this)])
+      Constructor.schema.assignProperties(instance, [extend(this, newPropertyValues)])
     }
     instance[newPropertyName] = property.coerce(
       newPropertyValues[newPropertyName]
@@ -221,7 +221,8 @@ Schema.prototype.validateAssignedPropertyNames = function(assignedProperties) {
 }
 Schema.prototype.areAllAssignedPropertyNamesValid = function(assignedProperties) {
   for (var j in assignedProperties) {
-    if (!this.propertyTypes[j]) return false
+    if (Object.prototype.hasOwnProperty.call(assignedProperties, j) && !this.propertyTypes[j])
+      return false
   }
   return true
 }

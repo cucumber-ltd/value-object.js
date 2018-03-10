@@ -68,7 +68,7 @@ describe('ValueObject', () => {
       assert.strictEqual(foo.y, null)
     })
 
-    it('does not allow undefined arguments', () => {
+    it('does not allow undefined property values', () => {
       class Foo extends ValueObject.define({ a: 'string', b: 'string' }) {}
 
       assertThrows(
@@ -78,7 +78,7 @@ describe('ValueObject', () => {
       )
     })
 
-    it('does not allow undefined in nested constructor properties', () => {
+    it('does not allow undefined property values in nested constructors', () => {
       class Baz extends ValueObject.define({ a: 'string' }) {}
       class Bar extends ValueObject.define({ baz: Baz }) {}
       class Foo extends ValueObject.define({ bar: Bar }) {}
@@ -285,6 +285,13 @@ describe('ValueObject', () => {
       const grandchild = new Grandchild()
       const parent = new Parent({ child: grandchild })
       assert.deepStrictEqual(parent.child, grandchild)
+    })
+
+    it('can be instantiated with another value object of the same type', () => {
+      class Foo extends ValueObject.define({ x: 'string' }) {}
+      const foo = new Foo({ x: 'yeah' })
+      const bar = new Foo(foo)
+      assert.equal(bar.x, 'yeah')
     })
   })
 
@@ -707,7 +714,7 @@ describe('ValueObject', () => {
       Hello.properties = { x: 'string' }
       assertThrows(
         () => new Hello({ x: 'yo' }).with({ y: 'ok', z: 'good' }),
-        'Hello({x:string}) called with {y, z, x} ("y" is unexpected, "z" is unexpected)'
+        'Hello({x:string}) called with {x, y, z} ("y" is unexpected, "z" is unexpected)'
       )
     })
   })
