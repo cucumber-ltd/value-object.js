@@ -36,9 +36,11 @@ describe('ValueObject', () => {
     it('can be used to extend existing ValueObjects', () => {
       class A extends ValueObject.define({ x: 'string' }) {}
       class B extends A.define({ y: 'string' }) {}
-      const { x, y } = new B({ x: 'foo', y: 'bar' })
-      assert.equal(x, 'foo')
-      assert.equal(y, 'bar')
+      const b = new B({ x: 'foo', y: 'bar' })
+      assert.equal(b.x, 'foo')
+      assert.equal(b.y, 'bar')
+      assert(b instanceof B)
+      assert(b instanceof A)
     })
   })
 
@@ -238,6 +240,18 @@ describe('ValueObject', () => {
         '"a" is invalid (Expected number, was string), "b" is invalid (Expected string, was number)',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
+    })
+
+    it('sets properties to subtypes', () => {
+      class Parent {
+      }
+      class Child extends Parent {
+      }
+      class Foo extends ValueObject.define({ x: Parent }) {
+      }
+      const child = new Child()
+      const foo = new Foo({ x: child })
+      assert.strictEqual(foo.x, child)
     })
 
     it('fails for class type when instantiated with the wrong type', () => {
