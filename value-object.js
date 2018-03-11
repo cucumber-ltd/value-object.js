@@ -57,7 +57,14 @@ ValueObject.define = function(properties) {
   ValueObject.extend(Definition, properties)
   Definition.define = function(moreProperties) {
     var Subclass = ValueObject.define(extend(properties, moreProperties))
+    var props = Object.getOwnPropertyNames(this)
     Subclass.prototype = Object.create(this.prototype)
+    for (var i = 0; i < props.length; i++) {
+      var prop = props[i]
+      if (prop !== 'length' && prop !== 'name' && prop !== 'prototype') {
+        Subclass[prop] = this[prop]
+      }
+    }
     return Subclass
   }
   ValueObject.ensureSchema(Definition)

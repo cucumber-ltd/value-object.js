@@ -42,6 +42,23 @@ describe('ValueObject', () => {
       assert(b instanceof B)
       assert(b instanceof A)
     })
+
+    it('preserves static members of extended ValueObjects', () => {
+      class A extends ValueObject.define({ x: 'string' }) {
+        static bibble() {
+          return 'bobble'
+        }
+      }
+      class B extends A.define({ y: 'string' }) {
+        static wibble() {
+          return 'wobble'
+        }
+      }
+      B.fibble = 'fobble'
+      assert.equal(B.bibble(), 'bobble')
+      assert.equal(B.wibble(), 'wobble')
+      assert.equal(B.fibble, 'fobble')
+    })
   })
 
   describe('#constructor(properties)', () => {
