@@ -57,11 +57,11 @@ ValueObject.define = function(properties) {
   ValueObject.extend(Definition, properties)
   Definition.define = function(moreProperties) {
     var Subclass = ValueObject.define(extend(properties, moreProperties))
-    var props = Object.getOwnPropertyNames(this)
+    var props = inheritedPropertiesOf(this)
     Subclass.prototype = Object.create(this.prototype)
     for (var i = 0; i < props.length; i++) {
       var prop = props[i]
-      if (prop !== 'length' && prop !== 'name' && prop !== 'prototype') {
+      if (typeof this[prop] === 'function' && prop !== 'define') {
         Subclass[prop] = this[prop]
       }
     }
@@ -69,6 +69,15 @@ ValueObject.define = function(properties) {
   }
   ValueObject.ensureSchema(Definition)
   return Definition
+}
+function inheritedPropertiesOf(obj) {
+  var props = [], o = obj;
+  while (o) {
+    props = props.concat(Object.getOwnPropertyNames(o))
+    o = Object.getPrototypeOf(o)
+    if (!o.prototype) break
+  }
+  return props
 }
 ValueObject.extend = function(Other, properties) {
   for (var key in ValueObject.prototype) {

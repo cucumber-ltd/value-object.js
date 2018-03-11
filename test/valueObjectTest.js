@@ -46,18 +46,21 @@ describe('ValueObject', () => {
     it('preserves static members of extended ValueObjects', () => {
       class A extends ValueObject.define({ x: 'string' }) {
         static bibble() {
-          return 'bobble'
+          return 'bobble ' + this.name
         }
       }
-      class B extends A.define({ y: 'string' }) {
+      class B extends A {
         static wibble() {
-          return 'wobble'
+          return 'wobble ' + this.name
         }
       }
+      class C extends B.define({ y: 'string' }) {}
       B.fibble = 'fobble'
-      assert.equal(B.bibble(), 'bobble')
-      assert.equal(B.wibble(), 'wobble')
+      assert.equal(B.bibble(), 'bobble B')
+      assert.equal(B.wibble(), 'wobble B')
       assert.equal(B.fibble, 'fobble')
+      assert.equal(C.bibble(), 'bobble C')
+      assert.equal(C.wibble(), 'wobble C')
     })
   })
 
