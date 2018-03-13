@@ -77,8 +77,11 @@ ValueObject.prototype.with = function(newPropertyValues) {
   var Constructor = this.constructor
   return new Constructor(extend(this, newPropertyValues))
 }
-ValueObject.prototype.toJSON = function(options) {
-  return this.constructor.schema.toJSON(this, options)
+ValueObject.prototype.toJSON = function() {
+  return this.constructor.schema.toJSON(this)
+}
+ValueObject.prototype.toPlainObject = function() {
+  return this.constructor.schema.toPlainObject(this)
 }
 ValueObject.prototype.validate = function() {
   var failures = new ValidationFailures()
@@ -143,10 +146,12 @@ function Schema(propertyTypes) {
   this.propertyTypes = propertyTypes
 }
 Schema.prototype.createConstructor = function() {
-  var schema = this
   function Struct() {
-    schema.assignProperties(this, arguments)
+    ValueObject.apply(this, arguments)
   }
+  Struct.prototype = Object.create(ValueObject.prototype)
+  Struct.schema = this
+  Struct.prototype.constructor = Struct
   return Struct
 }
 Schema.prototype.assignProperties = function(assignee, args) {
@@ -227,15 +232,25 @@ Schema.prototype.areEqual = function(a, b) {
   }
   return a.constructor.schema === b.constructor.schema
 }
-Schema.prototype.toJSON = function(instance, options) {
+Schema.prototype.toPlainObject = function(instance) {
+  if (instance === null) return null
+  var object = {}
+  for (var propertyName in this.propertyTypes) {
+    var property = this.propertyTypes[propertyName]
+    object[propertyName] = typeof property.toPlainObject === 'function' ?
+      property.toPlainObject(instance[propertyName]) : JSON.parse(JSON.stringify(instance[propertyName]))
+  }
+  return object
+}
+Schema.prototype.toJSON = function(instance) {
   if (instance === null) return null
   var json = {}
   for (var propertyName in this.propertyTypes) {
     var property = this.propertyTypes[propertyName]
     json[propertyName] = typeof property.toJSON === 'function' ?
-      property.toJSON(instance[propertyName], options) : instance[propertyName]
+      property.toJSON(instance[propertyName]) : instance[propertyName]
   }
-  if (!(options && options.typeNames === false && instance.constructor.name)) json.__type__ = instance.constructor.name
+  if (instance.constructor.name) json.__type__ = instance.constructor.name
   return json
 }
 Schema.prototype.describe = function() {
@@ -263,6 +278,16 @@ ArrayProp.prototype.areEqual = function(a, b) {
 ArrayProp.prototype.describe = function() {
   return '[' + this.elementType.describe() + ']'
 }
+ArrayProp.prototype.toJSON = function(instance) {
+  return instance === null ? null : instance.map(function(element, index) {
+    return typeof element.toJSON === 'function' ? element.toJSON(index) : element
+  })
+}
+ArrayProp.prototype.toPlainObject = function(instance) {
+  return instance === null ? null : instance.map(function(element) {
+    return element === null ? null : typeof element.toPlainObject === 'function' ? element.toPlainObject() : element
+  })
+}
 
 function UntypedArrayProp() {}
 UntypedArrayProp.prototype.coerce = function(value) {
@@ -271,6 +296,7 @@ UntypedArrayProp.prototype.coerce = function(value) {
   return value
 }
 UntypedArrayProp.prototype.areEqual = function(a, b) {
+  if (a === null && b === null) return true
   if (a.length != b.length) return false
   for (var i = 0; i < a.length; i++) {
     if (a[i] !== b[i] && !(typeof a[i].isEqualTo === 'function' && a[i].isEqualTo(b[i]))) {
@@ -281,6 +307,16 @@ UntypedArrayProp.prototype.areEqual = function(a, b) {
 }
 UntypedArrayProp.prototype.describe = function() {
   return 'Array'
+}
+UntypedArrayProp.prototype.toJSON = function(instance) {
+  return instance === null ? null : instance.map(function(element, index) {
+    return typeof element.toJSON === 'function' ? element.toJSON(index) : element
+  })
+}
+UntypedArrayProp.prototype.toPlainObject = function(instance) {
+  return instance === null ? null : instance.map(function(element) {
+    return typeof element.toPlainObject === 'function' ? element.toPlainObject() : element
+  })
 }
 
 function Ctor(ctor) {
@@ -313,10 +349,10 @@ Ctor.prototype.areEqual = function(a, b) {
 Ctor.prototype.describe = function() {
   return functionName(this.ctor)
 }
-Ctor.prototype.toJSON = function(instance, options) {
+Ctor.prototype.toJSON = function(instance) {
   if (instance === null) return null
   return typeof instance.toJSON === 'function' ?
-    instance.toJSON(options) : JSON.parse(JSON.stringify(instance))
+    instance.toJSON() : JSON.parse(JSON.stringify(instance))
 }
 
 function Primitive(cast, name) {

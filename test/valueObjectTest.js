@@ -198,24 +198,6 @@ describe('ValueObject', () => {
       assert.equal(deserialized.x.y.a, 123)
     })
 
-    it('allows nested types to be serialized as arbitrary objects in JSON without __type__ members', () => {
-      class Foo extends ValueObject.define({ a: 'number' }) {
-        static fromJSON(json) {
-          return { a: Number(json.zz) }
-        }
-
-        toJSON() {
-          return { zz: this.a }
-        }
-      }
-      class Bar extends ValueObject.define({ x: { y: Foo } }) {}
-      const instance = new Bar({ x: { y: new Foo({ a: 123 }) } })
-      const json = JSON.stringify(instance.toJSON({ typeNames: false }))
-      assert.equal(json, '{"x":{"y":{"zz":123}}}')
-      const deserialized = new Bar(JSON.parse(json))
-      assert.equal(deserialized.x.y.a, 123)
-    })
-
     it('sets properties with different primitive types', () => {
       class Foo extends ValueObject.define({ a: 'string', b: 'number', c: 'boolean' }) {}
 
@@ -395,12 +377,17 @@ describe('ValueObject', () => {
 
     it('is equal to another object with untyped array with same values', () => {
       class Foo extends ValueObject.define({ a: Array }) {}
-      assert(new Foo({ a: [2, 1] }).isEqualTo(new Foo({ a: [2, 1] })))
+      assert(new Foo({ a: [2, 1, null] }).isEqualTo(new Foo({ a: [2, 1, null] })))
     })
 
     it('is not equal to another object with untyped array with different values', () => {
       class Foo extends ValueObject.define({ a: Array }) {}
       assert(!new Foo({ a: [2, 1] }).isEqualTo(new Foo({ a: [1, 2] })))
+    })
+
+    it('is equal to another object with untyped array with a null value', () => {
+      class Foo extends ValueObject.define({ a: Array }) {}
+      assert(new Foo({ a: null }).isEqualTo(new Foo({ a: null })))
     })
 
     it('is equal to another object with untyped array with no elements', () => {
@@ -634,6 +621,26 @@ describe('ValueObject', () => {
       assert.equal(foo.x, 666)
     })
 
+    it('calls toJSON on each element of a typed Array property', () => {
+      class B extends ValueObject.define({ y: 'string' }) {}
+      class A extends ValueObject.define({ x: [B] }) {}
+      const a = new A({ x: [new B({ y: 'z' })] })
+      assert.deepEqual(a.toJSON(), {
+        x: [ { y: 'z', __type__: 'B' } ],
+        __type__: 'A'
+      })
+    })
+
+    it('calls toJSON on each element of an untyped Array property', () => {
+      class A extends ValueObject.define({ x: Array }) {}
+      class B extends ValueObject.define({ y: 'string' }) {}
+      const a = new A({ x: [1, 'good', new B({ y: 'fff' }), { toJSON() { return 'ok' } }] })
+      assert.deepEqual(a.toJSON(), {
+        x: [ 1, 'good', { y: 'fff', __type__: 'B' }, 'ok' ],
+        __type__: 'A'
+      })
+    })
+
     it('allows null values', () => {
       class Bar extends ValueObject.define({ y: 'number' }) {}
       class Foo extends ValueObject.define({ a: 'string', b: Bar, c: 'object', d: { x: 'number' } }) {}
@@ -645,6 +652,18 @@ describe('ValueObject', () => {
     })
   })
 
+  describe('#toPlainObject()', () => {
+    it('converts the value object to plain object without __type__ members', () => {
+      class X extends ValueObject.define({ a: 'number' }) {}
+      class Y extends ValueObject.define({ b: [X], c: [{ d: 'number' }] }) {}
+
+      const x = new X({ a: 1 })
+      const y = new Y({ b: [x, null], c: [{ d: null }] })
+
+      assert.equal(JSON.stringify(y.toPlainObject()), '{"b":[{"a":1},null],"c":[{"d":null}]}')
+    })
+  })
+
   describe('#with(newPropertyValues)', () => {
     it('creates a new value object overriding any stated values', () => {
       class MyValueObject extends ValueObject {}
@@ -652,6 +671,12 @@ describe('ValueObject', () => {
       const original = new MyValueObject({ propA: 'ZZ', propB: 123, propC: 'AA' })
       const overriding = original.with({ propA: 'YY', propB: 666 })
       assert.deepEqual(overriding, { propA: 'YY', propB: 666, propC: 'AA' })
+    })
+
+    it('can be used on nested anonymous types', () => {
+      class Z extends ValueObject.define({ x: { y: 'string' } }) {}
+      const z = new Z({ x: { y: 'ok' }})
+      assert.deepEqual(z.x.with({ y: 'no' }).y, 'no')
     })
 
     it('overrides inherited properties', () => {
