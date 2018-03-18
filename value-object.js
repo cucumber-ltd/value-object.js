@@ -50,34 +50,20 @@ ValueObject.findPropertyType = function(declared) {
   }
 }
 ValueObject.define = function(properties) {
-  ValueObject.parseSchema(properties)
-  function Definition() {
-    ValueObject.apply(this, arguments)
-  }
-  ValueObject.extend(Definition, properties)
-  Definition.define = function(moreProperties) {
-    var Subclass = ValueObject.define(extend(properties, moreProperties))
-    var props = inheritedPropertiesOf(this)
-    Subclass.prototype = Object.create(this.prototype)
-    for (var i = 0; i < props.length; i++) {
-      var prop = props[i]
-      if (typeof this[prop] === 'function' && prop !== 'define') {
-        Subclass[prop] = this[prop]
-      }
+  var VO = ValueObject
+  return (function() {
+    function ValueObject() {
+      VO.apply(this, arguments)
     }
-    return Subclass
-  }
-  ValueObject.ensureSchema(Definition)
-  return Definition
-}
-function inheritedPropertiesOf(obj) {
-  var props = [], o = obj;
-  while (o) {
-    props = props.concat(Object.getOwnPropertyNames(o))
-    o = Object.getPrototypeOf(o)
-    if (!o.prototype) break
-  }
-  return props
+    ValueObject.prototype = Object.create(VO.prototype)
+    ValueObject.prototype.constructor = ValueObject
+    ValueObject.properties = properties
+    ValueObject.extendSchema = function(newProperties) {
+      this.schema.defineProperties(newProperties)
+    }
+    VO.ensureSchema(ValueObject)
+    return ValueObject
+  })()
 }
 ValueObject.extend = function(Other, properties) {
   for (var key in ValueObject.prototype) {
@@ -158,28 +144,6 @@ ValueObject.deserializeForNamespaces = function(namespaces) {
   }
 }
 
-function Scalar(value) {
-  ValueObject.call(this, typeof value === 'string' ? { value: value } : value)
-}
-ValueObject.extend(Scalar, { value: 'string' })
-Scalar.prototype.valueOf = function() {
-  return this.value
-}
-Scalar.prototype.inspect = function(_, options) {
-  return functionName(this.constructor) + " { value: '" +
-    (options.stylize ? options.stylize(this.value, 'string') : this.value) + "' }"
-}
-Scalar.prototype.uriEncoded = function() {
-  return encodeURI(this.value)
-}
-Scalar.prototype.uriComponentEncoded = function() {
-  return encodeURIComponent(this.value)
-}
-Scalar.prototype.queryEncoded = function() {
-  return this.uriComponentEncoded().replace(/%20/g, '+')
-}
-ValueObject.Scalar = Scalar
-
 function Schema(propertyTypes) {
   this.propertyTypes = propertyTypes
   this.propertyNames = keys(propertyTypes)
@@ -192,6 +156,10 @@ Schema.prototype.createConstructor = function() {
   Struct.schema = this
   Struct.prototype.constructor = Struct
   return Struct
+}
+Schema.prototype.defineProperties = function(properties) {
+  Object.assign(this.propertyTypes, ValueObject.parseSchema(properties))
+  this.propertyNames = keys(this.propertyTypes)
 }
 Schema.prototype.assignProperties = function(assignee, args) {
   if (args.length != 1) {
@@ -549,5 +517,29 @@ ValueObject.ValueObjectError = ValueObjectError
 
 var freeze = 'freeze' in Object ? Object.freeze : function() {}
 var functionName = ValueObject.name ? function(fn) { return fn.name } : function() { return 'ValueObject' }
+
+function Scalar(value) {
+  ValueObject.call(this, typeof value === 'string' ? { value: value } : value)
+}
+Scalar.prototype = Object.create(ValueObject.prototype)
+Scalar.prototype.constructor = Scalar
+Scalar.prototype.constructor.schema = new Schema(ValueObject.parseSchema({ value: 'string' }))
+Scalar.prototype.valueOf = function() {
+  return this.value
+}
+Scalar.prototype.inspect = function(_, options) {
+  return functionName(this.constructor) + " { value: '" +
+    (options.stylize ? options.stylize(this.value, 'string') : this.value) + "' }"
+}
+Scalar.prototype.uriEncoded = function() {
+  return encodeURI(this.value)
+}
+Scalar.prototype.uriComponentEncoded = function() {
+  return encodeURIComponent(this.value)
+}
+Scalar.prototype.queryEncoded = function() {
+  return this.uriComponentEncoded().replace(/%20/g, '+')
+}
+ValueObject.Scalar = Scalar
 
 module.exports = ValueObject

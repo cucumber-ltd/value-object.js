@@ -33,16 +33,6 @@ describe('ValueObject', () => {
       )
     })
 
-    it('can be used to extend existing ValueObjects', () => {
-      class A extends ValueObject.define({ x: 'string' }) {}
-      class B extends A.define({ y: 'string' }) {}
-      const b = new B({ x: 'foo', y: 'bar' })
-      assert.equal(b.x, 'foo')
-      assert.equal(b.y, 'bar')
-      assert(b instanceof B)
-      assert(b instanceof A)
-    })
-
     it('preserves static members of extended ValueObjects', () => {
       class A extends ValueObject.define({ x: 'string' }) {
         static bibble() {
@@ -54,7 +44,7 @@ describe('ValueObject', () => {
           return 'wobble ' + this.name
         }
       }
-      class C extends B.define({ y: 'string' }) {}
+      class C extends B {}
       B.fibble = 'fobble'
       assert.equal(B.bibble(), 'bobble B')
       assert.equal(B.wibble(), 'wobble B')
@@ -509,6 +499,33 @@ describe('ValueObject', () => {
         'Sub({city:string, owner:string, id:string, seq:number}) called with {seq, city, owner} ("id" is missing)',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
+    })
+
+    it('calls each constructor in each superclass', () => {
+      class Top extends ValueObject.define({ x: 'string' }) {
+        constructor(args) {
+          super(Object.assign({ x: '1' }, args))
+        }
+      }
+
+      class Middle extends Top {
+        constructor(args) {
+          super(Object.assign({ y: '2' }, args))
+        }
+      }
+      Middle.extendSchema({ y: 'string' })
+
+      class Bottom extends Middle {
+        constructor() {
+          super({ z: '3' })
+        }
+      }
+      Bottom.extendSchema({ z: 'string' })
+
+      const bottom = new Bottom()
+      assert.equal(bottom.x, '1')
+      assert.equal(bottom.y, '2')
+      assert.equal(bottom.z, '3')
     })
 
     it('accepts new property type definitions', () => {
