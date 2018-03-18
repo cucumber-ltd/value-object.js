@@ -487,11 +487,13 @@ describe('ValueObject', () => {
 
   describe('extending', () => {
     it('can be subclassed', () => {
-      class Base extends ValueObject.define({}) {}
-      Base.extendSchema({ id: 'string', seq: 'number' })
+      class Base extends ValueObject.define({ id: 'string', seq: 'number' }) {}
 
-      class Sub extends Base {}
-      Sub.extendSchema({ city: 'string', owner: 'string' })
+      class Sub extends Base {
+        static get schema() {
+          return super.schema.with({ city: 'string', owner: 'string' })
+        }
+      }
 
       new Sub({ id: 'xyz', seq: 4, city: 'London', owner: 'Aslak' })
       assertThrows(
@@ -501,7 +503,7 @@ describe('ValueObject', () => {
       )
     })
 
-    it('calls each constructor in each superclass', () => {
+    it('calls the constructor of each superclass', () => {
       class Top extends ValueObject.define({ x: 'string' }) {
         constructor(args) {
           super(Object.assign({ x: '1' }, args))
@@ -512,20 +514,42 @@ describe('ValueObject', () => {
         constructor(args) {
           super(Object.assign({ y: '2' }, args))
         }
+
+        static get schema() {
+          return super.schema.with({ y: 'string' })
+        }
       }
-      Middle.extendSchema({ y: 'string' })
 
       class Bottom extends Middle {
         constructor() {
           super({ z: '3' })
         }
+
+        static get schema() {
+          return super.schema.with({ z: 'string' })
+        }
       }
-      Bottom.extendSchema({ z: 'string' })
 
       const bottom = new Bottom()
       assert.equal(bottom.x, '1')
       assert.equal(bottom.y, '2')
       assert.equal(bottom.z, '3')
+    })
+
+    it('does not mutate the schema of each superclass', () => {
+      class Top extends ValueObject.define({ x: 'string' }) {
+      }
+      class Bottom extends Top {
+        static get schema() {
+          return super.schema.with({ y: 'string' })
+        }
+      }
+
+      const top = new Top({ x: 'hello' })
+      assert.equal(top.x, 'hello')
+      const bottom = new Bottom({ x: 'hello', y: 'howdy' })
+      assert.equal(bottom.x, 'hello')
+      assert.equal(bottom.y, 'howdy')
     })
 
     it('accepts new property type definitions', () => {
@@ -653,8 +677,11 @@ describe('ValueObject', () => {
   describe('#toJSON()', () => {
     it('includes inherited properties', () => {
       class Base extends ValueObject.define({ propA: 'string' }) {}
-      class Sub extends Base {}
-      Sub.extendSchema({ propB: 'string' })
+      class Sub extends Base {
+        static get schema() {
+          return super.schema.with({ propB: 'string' })
+        }
+      }
 
       const propA = 'AA'
       const propB = 'BB'
@@ -737,8 +764,11 @@ describe('ValueObject', () => {
 
     it('overrides inherited properties', () => {
       class Base extends ValueObject.define({ propA: 'string', propB: 'number', propE: Date }) {}
-      class Sub extends Base {}
-      Sub.extendSchema({ propC: 'string', propD: 'number' })
+      class Sub extends Base {
+        static get schema() {
+          return super.schema.with({ propC: 'string', propD: 'number' })
+        }
+      }
 
       const date = new Date()
       const original = new Sub({ propA: 'ZZ', propB: 123, propC: 'AA', propD: 321, propE: date })
@@ -748,8 +778,11 @@ describe('ValueObject', () => {
 
     it('overrides inherited properties twice', () => {
       class Base extends ValueObject.define({ propA: 'string', propB: 'number', propE: Date }) {}
-      class Sub extends Base {}
-      Sub.extendSchema({ propC: 'string', propD: 'number' })
+      class Sub extends Base {
+        static get schema() {
+          return super.schema.with({ propC: 'string', propD: 'number' })
+        }
+      }
 
       const date = new Date()
       const original = new Sub({ propA: 'ZZ', propB: 123, propC: 'AA', propD: 321, propE: date })

@@ -1,16 +1,6 @@
 function ValueObject() {
   this.constructor.schema.assignProperties(this, arguments)
 }
-ValueObject.mergeProperties = function(constructor) {
-  var all = {}
-  while (constructor) {
-    for (var name in constructor.properties) {
-      all[name] = constructor.properties[name]
-    }
-    constructor = Object.getPrototypeOf(constructor)
-  }
-  return all
-}
 ValueObject.parseSchema = function(definition) {
   var properties = {}
   for (var propertyName in definition) {
@@ -47,22 +37,18 @@ ValueObject.define = function(properties) {
     function ValueObject() {
       VO.apply(this, arguments)
     }
-    ValueObject.prototype = Object.create(VO.prototype)
-    ValueObject.prototype.constructor = ValueObject
-    ValueObject.extendSchema = function(newProperties) {
-      this.schema.defineProperties(newProperties)
+    ValueObject.prototype = {}
+    for (var key in VO.prototype) {
+      ValueObject.prototype[key] = VO.prototype[key]
     }
-    ValueObject.schema = new Schema(
-      VO.parseSchema(properties)
-    )
+    ValueObject.prototype.constructor = ValueObject
+    Object.defineProperty(ValueObject, 'schema', {
+      value: new Schema(
+        VO.parseSchema(properties)
+      )
+    })
     return ValueObject
   })()
-}
-ValueObject.extend = function(Other, properties) {
-  for (var key in ValueObject.prototype) {
-    Other.prototype[key] = ValueObject.prototype[key]
-  }
-  Other.properties = properties
 }
 ValueObject.definePropertyType = function(name, definition) {
   ValueObject.propertyTypes[name] = definition
@@ -150,9 +136,9 @@ Schema.prototype.createConstructor = function() {
   Struct.prototype.constructor = Struct
   return Struct
 }
-Schema.prototype.defineProperties = function(properties) {
-  Object.assign(this.propertyTypes, ValueObject.parseSchema(properties))
-  this.propertyNames = keys(this.propertyTypes)
+Schema.prototype.with = function(properties) {
+  var newPropertyTypes = Object.assign(this.propertyTypes, ValueObject.parseSchema(properties))
+  return new Schema(newPropertyTypes)
 }
 Schema.prototype.assignProperties = function(assignee, args) {
   if (args.length != 1) {
