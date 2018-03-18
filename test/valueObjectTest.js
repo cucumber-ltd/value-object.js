@@ -33,6 +33,14 @@ describe('ValueObject', () => {
       )
     })
 
+    it('does not allow defining properties as unrecognised type names', () => {
+      assertThrows(
+        () => ValueObject.define({ x: 'string  ' }),
+        "Property defined as unsupported type 'string  '",
+        error => assert(error instanceof ValueObject.ValueObjectError)
+      )
+    })
+
     it('preserves static members of extended ValueObjects', () => {
       class A extends ValueObject.define({ x: 'string' }) {
         static bibble() {
@@ -344,6 +352,16 @@ describe('ValueObject', () => {
       class Foo extends ValueObject.define({ prop1: 'string' }) {}
       class Bar extends ValueObject.define({ prop1: 'string' }) {}
       assert(!new Foo({ prop1: 'dave' }).isEqualTo(new Bar({ prop1: 'dave' })))
+    })
+
+    it('is not equal to another value object of the same type but an overridden schema with equal property values', () => {
+      class Foo extends ValueObject.define({ prop1: 'string' }) {}
+      class Bar extends Foo {
+        static get schema() {
+          return super.schema.with({ prop2: 'string' })
+        }
+      }
+      assert(new Bar({ prop1: '1', prop2: '2' }).isEqualTo(new Bar({ prop1: '1', prop2: '2' })))
     })
 
     it('is equal to another value object with equal string property values', () => {

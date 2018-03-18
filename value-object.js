@@ -6,6 +6,9 @@ ValueObject.parseSchema = function(definition) {
   for (var propertyName in definition) {
     var declared = definition[propertyName]
     properties[propertyName] = ValueObject.findPropertyType(declared)
+    if (!properties[propertyName]) {
+      throw new ValueObjectError("Property defined as unsupported type '" + declared + "'")
+    }
   }
   return properties
 }
@@ -226,7 +229,7 @@ Schema.prototype.areEqual = function(a, b) {
       return false
     }
   }
-  return a.constructor.schema === b.constructor.schema
+  return a.constructor === b.constructor
 }
 Schema.prototype.toPlainObject = function(instance) {
   if (instance === null) return null
