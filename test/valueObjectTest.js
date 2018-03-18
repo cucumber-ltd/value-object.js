@@ -536,20 +536,25 @@ describe('ValueObject', () => {
       assert.equal(bottom.z, '3')
     })
 
-    it('does not mutate the schema of each superclass', () => {
-      class Top extends ValueObject.define({ x: 'string' }) {
-      }
-      class Bottom extends Top {
+    it('can be subclassed many times', () => {
+      class Top extends ValueObject.define({ x: 'string' }) {}
+
+      class B1 extends Top {
         static get schema() {
           return super.schema.with({ y: 'string' })
         }
       }
 
-      const top = new Top({ x: 'hello' })
-      assert.equal(top.x, 'hello')
-      const bottom = new Bottom({ x: 'hello', y: 'howdy' })
-      assert.equal(bottom.x, 'hello')
-      assert.equal(bottom.y, 'howdy')
+      class B2 extends Top {
+        static get schema() {
+          return super.schema.with({ z: 'string' })
+        }
+      }
+
+      const b1 = new B1({ x: 'X', y: 'Y' })
+      const b2 = new B2({ x: 'X', z: 'Z' })
+      assert.equal(b1.y, 'Y')
+      assert.equal(b2.z, 'Z')
     })
 
     it('accepts new property type definitions', () => {
