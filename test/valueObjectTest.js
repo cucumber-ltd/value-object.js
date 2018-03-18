@@ -487,16 +487,16 @@ describe('ValueObject', () => {
 
   describe('extending', () => {
     it('can be subclassed', () => {
-      class Base extends ValueObject {}
-      Base.properties = { id: 'string', seq: 'number' }
+      class Base extends ValueObject.define({}) {}
+      Base.extendSchema({ id: 'string', seq: 'number' })
 
       class Sub extends Base {}
-      Sub.properties = { city: 'string', owner: 'string' }
+      Sub.extendSchema({ city: 'string', owner: 'string' })
 
       new Sub({ id: 'xyz', seq: 4, city: 'London', owner: 'Aslak' })
       assertThrows(
         () => new Sub({ seq: 4, city: 'London', owner: 'Aslak' }),
-        'Sub({city:string, owner:string, id:string, seq:number}) called with {seq, city, owner} ("id" is missing)',
+        'Sub({id:string, seq:number, city:string, owner:string}) called with {seq, city, owner} ("id" is missing)',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
@@ -652,10 +652,9 @@ describe('ValueObject', () => {
 
   describe('#toJSON()', () => {
     it('includes inherited properties', () => {
-      class Base extends ValueObject {}
-      Base.properties = { propA: 'string' }
+      class Base extends ValueObject.define({ propA: 'string' }) {}
       class Sub extends Base {}
-      Sub.properties = { propB: 'string' }
+      Sub.extendSchema({ propB: 'string' })
 
       const propA = 'AA'
       const propB = 'BB'
@@ -724,8 +723,7 @@ describe('ValueObject', () => {
 
   describe('#with(newPropertyValues)', () => {
     it('creates a new value object overriding any stated values', () => {
-      class MyValueObject extends ValueObject {}
-      MyValueObject.properties = { propA: 'string', propB: 'number', propC: 'string' }
+      class MyValueObject extends ValueObject.define({ propA: 'string', propB: 'number', propC: 'string' }) {}
       const original = new MyValueObject({ propA: 'ZZ', propB: 123, propC: 'AA' })
       const overriding = original.with({ propA: 'YY', propB: 666 })
       assert.deepEqual(overriding, { propA: 'YY', propB: 666, propC: 'AA' })
@@ -738,10 +736,9 @@ describe('ValueObject', () => {
     })
 
     it('overrides inherited properties', () => {
-      class Base extends ValueObject {}
-      Base.properties = { propA: 'string', propB: 'number', propE: Date }
+      class Base extends ValueObject.define({ propA: 'string', propB: 'number', propE: Date }) {}
       class Sub extends Base {}
-      Sub.properties = { propC: 'string', propD: 'number' }
+      Sub.extendSchema({ propC: 'string', propD: 'number' })
 
       const date = new Date()
       const original = new Sub({ propA: 'ZZ', propB: 123, propC: 'AA', propD: 321, propE: date })
@@ -750,10 +747,9 @@ describe('ValueObject', () => {
     })
 
     it('overrides inherited properties twice', () => {
-      class Base extends ValueObject {}
-      Base.properties = { propA: 'string', propB: 'number', propE: Date }
+      class Base extends ValueObject.define({ propA: 'string', propB: 'number', propE: Date }) {}
       class Sub extends Base {}
-      Sub.properties = { propC: 'string', propD: 'number' }
+      Sub.extendSchema({ propC: 'string', propD: 'number' })
 
       const date = new Date()
       const original = new Sub({ propA: 'ZZ', propB: 123, propC: 'AA', propD: 321, propE: date })
@@ -762,8 +758,7 @@ describe('ValueObject', () => {
     })
 
     it('throws when passed a non-existent property', () => {
-      class Hello extends ValueObject {}
-      Hello.properties = { x: 'string' }
+      class Hello extends ValueObject.define({ x: 'string' }) {}
       assertThrows(
         () => new Hello({ x: 'yo' }).with({ y: 'ok', z: 'good' }),
         'Hello({x:string}) called with {x, y, z} ("y" is unexpected, "z" is unexpected)'
@@ -771,15 +766,13 @@ describe('ValueObject', () => {
     })
 
     it('returns instances of the original type', () => {
-      class Yo extends ValueObject {}
-      Yo.properties = { x: 'string' }
+      class Yo extends ValueObject.define({ x: 'string' }) {}
       const yo = new Yo({ x: '1' }).with({ x: '2' })
       assert.equal(yo.constructor, Yo)
     })
 
     it('returns instances with schemas', () => {
-      class Yo extends ValueObject {}
-      Yo.properties = { x: 'string' }
+      class Yo extends ValueObject.define({ x: 'string' }) {}
       const yo = new Yo({ x: '1' }).with({ x: '2' })
       assert.deepEqual(yo.constructor.schema.propertyNames, ['x'])
     })

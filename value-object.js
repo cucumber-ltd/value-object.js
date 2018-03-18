@@ -1,5 +1,4 @@
 function ValueObject() {
-  ValueObject.ensureSchema(this.constructor)
   this.constructor.schema.assignProperties(this, arguments)
 }
 ValueObject.mergeProperties = function(constructor) {
@@ -11,13 +10,6 @@ ValueObject.mergeProperties = function(constructor) {
     constructor = Object.getPrototypeOf(constructor)
   }
   return all
-}
-ValueObject.ensureSchema = function(constructor) {
-  if (!constructor.schema) {
-    constructor.schema = new Schema(
-      ValueObject.parseSchema(ValueObject.mergeProperties(constructor))
-    )
-  }
 }
 ValueObject.parseSchema = function(definition) {
   var properties = {}
@@ -57,11 +49,12 @@ ValueObject.define = function(properties) {
     }
     ValueObject.prototype = Object.create(VO.prototype)
     ValueObject.prototype.constructor = ValueObject
-    ValueObject.properties = properties
     ValueObject.extendSchema = function(newProperties) {
       this.schema.defineProperties(newProperties)
     }
-    VO.ensureSchema(ValueObject)
+    ValueObject.schema = new Schema(
+      VO.parseSchema(properties)
+    )
     return ValueObject
   })()
 }
