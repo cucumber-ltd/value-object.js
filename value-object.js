@@ -139,7 +139,7 @@ Schema.prototype.createConstructor = function() {
   Struct.prototype.constructor = Struct
   return Struct
 }
-Schema.prototype.with = function(properties) {
+Schema.prototype.extend = function(properties) {
   var newPropertyTypes = extend(this.propertyTypes, ValueObject.parseSchema(properties))
   return new Schema(newPropertyTypes)
 }

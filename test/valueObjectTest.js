@@ -358,7 +358,7 @@ describe('ValueObject', () => {
       class Foo extends ValueObject.define({ prop1: 'string' }) {}
       class Bar extends Foo {
         static get schema() {
-          return super.schema.with({ prop2: 'string' })
+          return super.schema.extend({ prop2: 'string' })
         }
       }
       assert(new Bar({ prop1: '1', prop2: '2' }).isEqualTo(new Bar({ prop1: '1', prop2: '2' })))
@@ -509,7 +509,7 @@ describe('ValueObject', () => {
 
       class Sub extends Base {
         static get schema() {
-          return super.schema.with({ city: 'string', owner: 'string' })
+          return super.schema.extend({ city: 'string', owner: 'string' })
         }
       }
 
@@ -534,7 +534,7 @@ describe('ValueObject', () => {
         }
 
         static get schema() {
-          return super.schema.with({ y: 'string' })
+          return super.schema.extend({ y: 'string' })
         }
       }
 
@@ -544,7 +544,7 @@ describe('ValueObject', () => {
         }
 
         static get schema() {
-          return super.schema.with({ z: 'string' })
+          return super.schema.extend({ z: 'string' })
         }
       }
 
@@ -559,13 +559,13 @@ describe('ValueObject', () => {
 
       class B1 extends Top {
         static get schema() {
-          return super.schema.with({ y: 'string' })
+          return super.schema.extend({ y: 'string' })
         }
       }
 
       class B2 extends Top {
         static get schema() {
-          return super.schema.with({ z: 'string' })
+          return super.schema.extend({ z: 'string' })
         }
       }
 
@@ -702,7 +702,7 @@ describe('ValueObject', () => {
       class Base extends ValueObject.define({ propA: 'string' }) {}
       class Sub extends Base {
         static get schema() {
-          return super.schema.with({ propB: 'string' })
+          return super.schema.extend({ propB: 'string' })
         }
       }
 
@@ -789,7 +789,7 @@ describe('ValueObject', () => {
       class Base extends ValueObject.define({ propA: 'string', propB: 'number', propE: Date }) {}
       class Sub extends Base {
         static get schema() {
-          return super.schema.with({ propC: 'string', propD: 'number' })
+          return super.schema.extend({ propC: 'string', propD: 'number' })
         }
       }
 
@@ -803,7 +803,7 @@ describe('ValueObject', () => {
       class Base extends ValueObject.define({ propA: 'string', propB: 'number', propE: Date }) {}
       class Sub extends Base {
         static get schema() {
-          return super.schema.with({ propC: 'string', propD: 'number' })
+          return super.schema.extend({ propC: 'string', propD: 'number' })
         }
       }
 
