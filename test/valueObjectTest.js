@@ -394,6 +394,16 @@ describe('ValueObject', () => {
       assert(!new Foo({ prop1: 321 }).isEqualTo(new Foo({ prop1: 345 })))
     })
 
+    it('is equal to another value object with equal Date property values', () => {
+      class Foo extends ValueObject.define({ prop1: Date }) {}
+      assert(new Foo({ prop1: new Date('2020-01-01') }).isEqualTo(new Foo({ prop1: new Date('2020-01-01') })))
+    })
+
+    it('is not equal to another value object with equal Date property values', () => {
+      class Foo extends ValueObject.define({ prop1: Date }) {}
+      assert(!new Foo({ prop1: new Date('2020-01-01') }).isEqualTo(new Foo({ prop1: new Date('2020-01-02') })))
+    })
+
     it('is equal to another value object with equal object property values', () => {
       class Foo extends ValueObject.define({ prop1: 'object' }) {}
       assert(new Foo({ prop1: { x: 123 } }).isEqualTo(new Foo({ prop1: { x: 123 } })))
@@ -464,6 +474,16 @@ describe('ValueObject', () => {
       class Bar extends ValueObject.define({ b: 'string' }) {}
       class Foo extends ValueObject.define({ a: Array }) {}
       assert(!new Foo({ a: [new Bar({ b: 'q' })] }).isEqualTo(new Foo({ a: [new Bar({ b: 'x' })] })))
+    })
+
+    it('is equal to another object with untyped array with value object elements with equal date members', () => {
+      class Bar extends ValueObject.define({ b: Date }) {}
+      class Foo extends ValueObject.define({ a: Array }) {}
+      assert(
+        new Foo({ a: [new Bar({ b: new Date('2020-01-01') })] })
+      .isEqualTo(
+        new Foo({ a: [new Bar({ b: new Date('2020-01-01') })] })
+      ))
     })
   })
 

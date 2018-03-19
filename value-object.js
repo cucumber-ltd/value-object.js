@@ -24,6 +24,8 @@ ValueObject.findPropertyType = function(declared) {
     )
   } else if (declared === Array) {
     return new UntypedArrayProp()
+  } else if (declared === Date) {
+    return new DateProp()
   } else if (typeof declared === "object") {
     return new Schema(ValueObject.parseSchema(declared))
   } else if (typeof declared === "function") {
@@ -324,9 +326,6 @@ function ConstructorProp(ctor) {
 ConstructorProp.prototype.coerce = function(value) {
   if (value === null) return null
   if (!(value instanceof this.ctor)) {
-    if (this.ctor === Date && typeof value === 'string') {
-      return new Date(value)
-    }
     var Constructor = this.ctor
     if (typeof this.ctor.fromJSON === 'function') {
       var properties = this.ctor.fromJSON(value)
@@ -337,13 +336,10 @@ ConstructorProp.prototype.coerce = function(value) {
     }
     throw new ValueObjectError('Expected ' + functionName(this.ctor) + ', was ' + inspectType(value))
   }
-  if (this.ctor === Date && !isFinite(value)) {
-    throw new ValueObjectError('Invalid Date')
-  }
   return value
 }
 ConstructorProp.prototype.areEqual = function(a, b) {
-  return this.ctor.schema.areEqual(a, b)
+  return this.ctor.schema ? this.ctor.schema.areEqual(a, b) : a == b
 }
 ConstructorProp.prototype.describe = function() {
   return functionName(this.ctor)
@@ -352,6 +348,29 @@ ConstructorProp.prototype.toJSON = function(instance) {
   if (instance === null) return null
   return typeof instance.toJSON === 'function' ?
     instance.toJSON() : JSON.parse(JSON.stringify(instance))
+}
+
+function DateProp() {}
+DateProp.prototype.coerce = function(value) {
+  if (value === null) return null
+  var date
+  if (value instanceof Date) {
+    date = value
+  } else if (typeof value === 'string' || typeof value === 'number') {
+    date = new Date(value)
+  } else {
+    throw new ValueObjectError('Expected Date, string or number, was ' + inspectType(value))
+  }
+  if (!isFinite(date)) {
+    throw new ValueObjectError('Invalid Date')
+  }
+  return date
+}
+DateProp.prototype.areEqual = function(a, b) {
+  return a.getTime() == b.getTime()
+}
+DateProp.prototype.describe = function() {
+  return 'Date'
 }
 
 function Primitive(cast, name) {
