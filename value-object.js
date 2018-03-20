@@ -6,15 +6,13 @@ ValueObject.parseSchema = function(definition) {
   for (var propertyName in definition) {
     var declared = definition[propertyName]
     properties[propertyName] = ValueObject.findPropertyType(declared)
-    if (!properties[propertyName]) {
-      throw new ValueObjectError("Property defined as unsupported type '" + declared + "'")
-    }
   }
   return properties
 }
 ValueObject.findPropertyType = function(declared) {
   if (typeof declared === "string") {
-    return ValueObject.propertyTypes[declared]
+    var prop = ValueObject.propertyTypes[declared]
+    if (prop) return prop
   } else if (Array.isArray(declared)) {
     if (declared.length != 1) {
       throw new ValueObjectError('Expected array property definition with single type element')
@@ -30,11 +28,11 @@ ValueObject.findPropertyType = function(declared) {
     return new Schema(ValueObject.parseSchema(declared))
   } else if (typeof declared === "function") {
     return new ConstructorProp(declared)
-  } else {
-    throw new ValueObjectError(
-      "Property defined as unsupported type (" + typeof declared + ")"
-    )
   }
+  var inspected = typeof declared === 'string' ? '"' + declared + '"' : declared
+  throw new ValueObjectError(
+    "Property defined as unsupported type (" + inspected + ")"
+  )
 }
 ValueObject.define = function(properties) {
   var VO = ValueObject
@@ -47,11 +45,9 @@ ValueObject.define = function(properties) {
       ValueObject.prototype[key] = VO.prototype[key]
     }
     ValueObject.prototype.constructor = ValueObject
-    Object.defineProperty(ValueObject, 'schema', {
-      value: new Schema(
-        VO.parseSchema(properties)
-      )
-    })
+    ValueObject.schema = new Schema(
+      VO.parseSchema(properties)
+    )
     return ValueObject
   })()
 }
@@ -74,13 +70,15 @@ ValueObject.prototype.with = function(newPropertyValues) {
     instance[propertyName] = this[propertyName]
   }
   for (var newPropertyName in newPropertyValues) {
-    var property = Constructor.schema.propertyTypes[newPropertyName]
-    if (!property) {
-      Constructor.schema.assignProperties(instance, [extend(this, newPropertyValues)])
+    if (Object.prototype.hasOwnProperty.call(newPropertyValues, newPropertyName)) {
+      var property = Constructor.schema.propertyTypes[newPropertyName]
+      if (!property) {
+        Constructor.schema.assignProperties(instance, [extend(this, newPropertyValues)])
+      }
+      instance[newPropertyName] = property.coerce(
+        newPropertyValues[newPropertyName]
+      )
     }
-    instance[newPropertyName] = property.coerce(
-      newPropertyValues[newPropertyName]
-    )
   }
   freeze(instance)
   return instance
@@ -126,6 +124,12 @@ ValueObject.deserializeForNamespaces = function(namespaces) {
 
     return new constructor(value)
   }
+}
+ValueObject.disableFreeze = function() {
+  freeze = disabledFreeze
+}
+ValueObject.enableFreeze = function() {
+  freeze = enabledFreeze
 }
 
 function Schema(propertyTypes) {
@@ -234,7 +238,6 @@ Schema.prototype.areEqual = function(a, b) {
   return a.constructor === b.constructor
 }
 Schema.prototype.toPlainObject = function(instance) {
-  if (instance === null) return null
   var object = {}
   for (var propertyName in this.propertyTypes) {
     var property = this.propertyTypes[propertyName]
@@ -251,6 +254,7 @@ Schema.prototype.toJSON = function(instance) {
     json[propertyName] = typeof property.toJSON === 'function' ?
       property.toJSON(instance[propertyName]) : instance[propertyName]
   }
+   /* istanbul ignore next */
   if (instance.constructor.name) json.__type__ = instance.constructor.name
   return json
 }
@@ -280,13 +284,17 @@ ArrayProp.prototype.describe = function() {
   return '[' + this.elementType.describe() + ']'
 }
 ArrayProp.prototype.toJSON = function(instance) {
-  return instance === null ? null : instance.map(function(element, index) {
-    return typeof element.toJSON === 'function' ? element.toJSON(index) : element
+  if (instance === null) return null
+  var elementType = this.elementType
+  return instance.map(function(element) {
+    return elementType.toJSON(element)
   })
 }
 ArrayProp.prototype.toPlainObject = function(instance) {
-  return instance === null ? null : instance.map(function(element) {
-    return element === null ? null : typeof element.toPlainObject === 'function' ? element.toPlainObject() : element
+  if (instance === null) return null
+  var elementType = this.elementType
+  return instance.map(function(element) {
+    return elementType.toPlainObject(element)
   })
 }
 
@@ -349,6 +357,11 @@ ConstructorProp.prototype.toJSON = function(instance) {
   return typeof instance.toJSON === 'function' ?
     instance.toJSON() : JSON.parse(JSON.stringify(instance))
 }
+ConstructorProp.prototype.toPlainObject = function(instance) {
+  if (instance === null) return null
+  return typeof instance.toPlainObject === 'function' ?
+    instance.toPlainObject() : JSON.parse(JSON.stringify(instance))
+}
 
 function DateProp() {}
 DateProp.prototype.coerce = function(value) {
@@ -378,10 +391,9 @@ function Primitive(cast, name) {
   this.name = name
 }
 Primitive.prototype.coerce = function(value) {
-  if (typeof value === this.name) return value
   if (value === null) return null
-  if (typeof value !== this.name) throw new ValueObjectError('Expected ' + this.name + ', was ' + inspectType(value))
-  return this.cast(value)
+  if (typeof value === this.name) return value
+  throw new ValueObjectError('Expected ' + this.name + ', was ' + inspectType(value))
 }
 Primitive.prototype.areEqual = function(a, b) {
   return this.cast(a) === this.cast(b)
@@ -396,11 +408,17 @@ ObjectProp.prototype.areEqual = function(a, b) {
   return JSON.stringify(a) === JSON.stringify(b)
 }
 
+function AnyProp() {}
+AnyProp.prototype.coerce = function(value) { return value }
+AnyProp.prototype.areEqual = function(a, b) { return a == b }
+AnyProp.prototype.describe = function() { return 'any' }
+
 ValueObject.propertyTypes = {
   string: new Primitive(String, 'string'),
   number: new Primitive(Number, 'number'),
   boolean: new Primitive(Boolean, 'boolean'),
-  object: new ObjectProp()
+  object: new ObjectProp(),
+  any: new AnyProp()
 }
 
 function ValidationFailures() {
@@ -461,7 +479,7 @@ function ValidationError(object, failures) {
 }
 ValidationError.prototype = new Error()
 
-var keys = 'keys' in Object ? Object.keys : function(o) {
+function keys(o) {
   var k = [];
   for (var key in o) {
     k.push(key)
@@ -516,8 +534,10 @@ function ValueObjectError(message) {
 ValueObjectError.prototype = new Error;
 ValueObject.ValueObjectError = ValueObjectError
 
-var freeze = 'freeze' in Object ? Object.freeze : function() {}
-var functionName = ValueObject.name ? function(fn) { return fn.name } : function() { return 'ValueObject' }
+function disabledFreeze() {}
+var enabledFreeze = 'freeze' in Object ? Object.freeze : /* istanbul ignore next */ disabledFreeze
+var freeze = enabledFreeze
+var functionName = ValueObject.name ? function(fn) { return fn.name } : /* istanbul ignore next */ function() { return 'ValueObject' }
 
 function Scalar(value) {
   ValueObject.call(this, typeof value === 'string' ? { value: value } : value)
