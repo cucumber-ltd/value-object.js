@@ -861,6 +861,15 @@ describe('ValueObject', () => {
       const json = new X({ y: null }).toJSON()
       assert.strictEqual(json.y, null)
     })
+
+    it('serializes arrays of primitives', () => {
+      class X extends ValueObject.define({ y: ['string'] }) {}
+      const x = new X({ y: ['yeah'] })
+      const json = x.toJSON()
+      assert.strictEqual(json.y[0], 'yeah')
+      json.y[0] = 'no'
+      assert.strictEqual(x.y[0], 'yeah')
+    })
   })
 
   describe('#toPlainObject()', () => {
@@ -904,6 +913,15 @@ describe('ValueObject', () => {
       class X extends ValueObject.define({ y: ['number'] }) {}
       const object = new X({ y: null }).toPlainObject()
       assert.strictEqual(object.y, null)
+    })
+
+    it('serializes arrays of primitives', () => {
+      class X extends ValueObject.define({ y: ['string'] }) {}
+      const x = new X({ y: ['yeah'] })
+      const plain = x.toPlainObject()
+      assert.strictEqual(plain.y[0], 'yeah')
+      plain.y[0] = 'no'
+      assert.strictEqual(x.y[0], 'yeah')
     })
   })
 

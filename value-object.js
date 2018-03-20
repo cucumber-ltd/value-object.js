@@ -286,16 +286,24 @@ ArrayProp.prototype.describe = function() {
 ArrayProp.prototype.toJSON = function(instance) {
   if (instance === null) return null
   var elementType = this.elementType
-  return instance.map(function(element) {
-    return elementType.toJSON(element)
-  })
+  if (typeof elementType.toJSON === 'function') {
+    return instance.map(function(element) {
+      return elementType.toJSON(element)
+    })
+  } else {
+    return instance.map(function (element) { return element })
+  }
 }
 ArrayProp.prototype.toPlainObject = function(instance) {
   if (instance === null) return null
   var elementType = this.elementType
-  return instance.map(function(element) {
-    return elementType.toPlainObject(element)
-  })
+  if (typeof elementType.toPlainObject === 'function') {
+    return instance.map(function(element) {
+      return elementType.toPlainObject(element)
+    })
+  } else {
+    return instance.map(function (element) { return element })
+  }
 }
 
 function UntypedArrayProp() {}
@@ -333,16 +341,16 @@ function ConstructorProp(ctor) {
 }
 ConstructorProp.prototype.coerce = function(value) {
   if (value === null) return null
-  if (!(value instanceof this.ctor)) {
-    var Constructor = this.ctor
-    if (typeof this.ctor.fromJSON === 'function') {
-      var properties = this.ctor.fromJSON(value)
+  var Constructor = this.ctor
+  if (!(value instanceof Constructor)) {
+    if (typeof Constructor.fromJSON === 'function') {
+      var properties = Constructor.fromJSON(value)
       return new Constructor(properties)
     }
     if (value && value.constructor === Object) {
       return new Constructor(value)
     }
-    throw new ValueObjectError('Expected ' + functionName(this.ctor) + ', was ' + inspectType(value))
+    throw new ValueObjectError('Expected ' + functionName(Constructor) + ', was ' + inspectType(value))
   }
   return value
 }
