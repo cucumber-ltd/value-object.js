@@ -135,6 +135,7 @@ ValueObject.enableFreeze = function() {
 function Schema(propertyTypes) {
   this.propertyTypes = propertyTypes
   this.propertyNames = keys(propertyTypes)
+  this.Constructor = this.createConstructor()
 }
 Schema.prototype.createConstructor = function() {
   function Struct() {
@@ -224,10 +225,13 @@ Schema.prototype.describePropertyValues = function(values) {
 }
 Schema.prototype.coerce = function(value) {
   if (value === null) return null
-  var Constructor = this.createConstructor()
+  var Constructor = this.Constructor
   return new Constructor(value)
 }
 Schema.prototype.areEqual = function(a, b) {
+  if (a === null || b === null) {
+    return a === b
+  }
   for (var propertyName in this.propertyTypes) {
     var property = this.propertyTypes[propertyName]
     if (typeof a === 'undefined' || typeof b === 'undefined' ||

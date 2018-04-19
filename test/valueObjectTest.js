@@ -460,6 +460,31 @@ describe('ValueObject', () => {
       assert(new Foo({ prop1: x }).isEqualTo(new Foo({ prop1: x })))
     })
 
+    it('is equal to another value object with equal schema property values', () => {
+      class Foo extends ValueObject.define({ prop1: { prop2: 'string' } }) {}
+      assert(new Foo({ prop1: { prop2: 'yes' } }).isEqualTo(new Foo({ prop1: { prop2: 'yes' } })))
+    })
+
+    it('is equal to another value object with null schema property values', () => {
+      class Foo extends ValueObject.define({ prop1: { prop2: 'string' } }) {}
+      assert(new Foo({ prop1: { prop2: null } }).isEqualTo(new Foo({ prop1: { prop2: null } })))
+    })
+
+    it('is not equal to another value object with different schema property values', () => {
+      class Foo extends ValueObject.define({ prop1: { prop2: 'string' } }) {}
+      assert(!new Foo({ prop1: { prop2: 'yes' } }).isEqualTo(new Foo({ prop1: { prop2: 'no' } })))
+    })
+
+    it('is not equal to another value object with a null schema property value', () => {
+      class Foo extends ValueObject.define({ prop1: { prop2: 'string' } }) {}
+      assert(!new Foo({ prop1: { prop2: 'yes' } }).isEqualTo(new Foo({ prop1: null })))
+    })
+
+    it('is not equal to another value object with a schema property value when it has a null value', () => {
+      class Foo extends ValueObject.define({ prop1: { prop2: 'string' } }) {}
+      assert(!new Foo({ prop1: null }).isEqualTo(new Foo({ prop1: { prop2: 'yes' } })))
+    })
+
     it('is not equal to another value object with different constructor property values', () => {
       function X() {}
       const x1 = new X()
