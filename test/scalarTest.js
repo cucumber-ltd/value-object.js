@@ -2,7 +2,7 @@
 'use strict'
 
 const assert = require('assert')
-const { Scalar } = require('../valueObject')
+const Scalar = require('..').Scalar
 
 describe(Scalar.name, () => {
   it('can be constructed with a value', () => {
@@ -17,7 +17,7 @@ describe(Scalar.name, () => {
     assert.equal(name.value, 'Boulders')
   })
 
-  describe('.valueOf()', () => {
+  describe('#valueOf()', () => {
     it('returns the value', () => {
       class Name extends Scalar {}
       const name = new Name({ value: 'Spanner' })
@@ -25,31 +25,31 @@ describe(Scalar.name, () => {
     })
   })
 
-  describe('.uriEncoded', () => {
+  describe('#uriEncoded()', () => {
     it('returns the value as URI encoded', () => {
       class Drink extends Scalar {}
       const drink = new Drink('Mad Dog 20/20')
-      assert.equal(drink.uriEncoded, 'Mad%20Dog%2020/20')
+      assert.equal(drink.uriEncoded(), 'Mad%20Dog%2020/20')
     })
   })
 
-  describe('.uriComponentEncoded', () => {
+  describe('#uriComponentEncoded()', () => {
     it('returns the value as URI component encoded', () => {
       class Drink extends Scalar {}
       const drink = new Drink('Mad Dog 20/20')
-      assert.equal(drink.uriComponentEncoded, 'Mad%20Dog%2020%2F20')
+      assert.equal(drink.uriComponentEncoded(), 'Mad%20Dog%2020%2F20')
     })
   })
 
-  describe('.queryEncoded', () => {
+  describe('#queryEncoded()', () => {
     it('returns the value as query string encoded', () => {
       class Drink extends Scalar {}
       const drink = new Drink('Mad Dog 20/20')
-      assert.equal(drink.queryEncoded, 'Mad+Dog+20%2F20')
+      assert.equal(drink.queryEncoded(), 'Mad+Dog+20%2F20')
     })
   })
 
-  describe('.inspect(_, options)', () => {
+  describe('#inspect(_, options)', () => {
     context('when options.stylize does not exist', () => {
       it('returns constructor.name { value: "the value" }', () => {
         class Score extends Scalar {}

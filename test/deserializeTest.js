@@ -3,24 +3,18 @@
 
 const assert = require('assert')
 const assertThrows = require('./assertThrows')
-const ValueObject = require('../valueObject')
+const ValueObject = require('..')
 
-describe(ValueObject.deserializeForNamespaces.name, () => {
-  it('Builds a deserialize function that can turn a JSON representation of an object', () => {
+describe('ValueObject.deserializeForNamespaces([{}, {}])', () => {
+  it('Builds a deserialize function', () => {
     class Foo {
-      constructor(bar) {
+      constructor({ bar }) {
         this.bar = bar
-      }
-      static fromJSON(json) {
-        return new Foo(json.bar)
       }
     }
     class Bar {
-      constructor(baz) {
+      constructor({ baz }) {
         this.baz = baz
-      }
-      static fromJSON(json) {
-        return new Bar(json.baz)
       }
     }
     const deserialize = ValueObject.deserializeForNamespaces([{ Foo, Bar }])
@@ -46,32 +40,64 @@ describe(ValueObject.deserializeForNamespaces.name, () => {
       )
     })
 
-    it('throws when a the type has no static toJSON method', () => {
-      class Bad {}
-      const deserialize = ValueObject.deserializeForNamespaces([{ Bad }])
-      assertThrows(() => deserialize(
-        '{ "__type__": "Bad" }'),
-        'Unable to deserialize an object with type "Bad". Deserializable types must have a static fromJSON method.'
-      )
+    it('deserializes errors', () => {
+      const ExtendableError = require('es6-error')
+
+      class BaseError extends ExtendableError {
+        static fromJSON(obj) {
+          return new this(obj.message)
+        }
+
+        toJSON() {
+          return {
+            __type__: this.constructor.name,
+            message: this.message,
+          }
+        }
+      }
+
+      class FooError extends BaseError {}
+
+      const serializedError = JSON.stringify(new FooError('boom').toJSON())
+      const deserialize = ValueObject.deserializeForNamespaces([{ FooError }])
+      const deserializedError = deserialize(serializedError)
+      assert.equal(deserializedError.constructor, FooError)
+      assert.equal(deserializedError.message, 'boom')
     })
   })
+})
 
-  describe('ValueObject.fromJSON(serializedProperties)', () => {
-    it('creates an instance of the ValueObject from the serialized properties', () => {
-      class ExampleValueObject extends ValueObject.define({
-        date1: Date,
-        date2: Date,
-        string1: 'string',
-        string2: 'string'
-      }) {}
-      const props = {
-        date1: new Date('2001-01-01'),
-        date2: null,
-        string1: 'lollipop',
-        string2: null
-      }
-      const object = ExampleValueObject.fromJSON(props)
-      assert.deepEqual(object, props)
-    })
+describe('new ValueObject()', () => {
+  it("Creates ValueObject instances from nested values without __type__ annotations", () => {
+    class B extends ValueObject.define({
+      o: 'string'
+    }) {}
+    class A extends ValueObject.define({
+      x: 'string',
+      y: B
+    }) {}
+    const props = { x: '123', y: { o: '2' } }
+    const object = new A(props)
+    assert.deepEqual(object, props)
+    assert.equal(object.constructor, A)
+    assert.equal(object.y.constructor, B)
+  })
+
+  it("Creates ValueObject instances from nested values with array properties without __type__ annotations", () => {
+    class B extends ValueObject.define({
+      o: 'string'
+    }) {}
+    class A extends ValueObject.define({
+      x: 'string',
+      y: B,
+      z: [B]
+    }) {}
+    const props = { x: '123', y: { o: '2' }, z: [{ o: '3' }, { o: '4' }] }
+    const object = new A(props)
+    assert.deepEqual(object, props)
+    assert.equal(object.constructor, A)
+    assert.equal(object.y.constructor, B)
+    assert.equal(object.z[0].constructor, B)
+    assert.equal(object.z[1].constructor, B)
   })
 })
