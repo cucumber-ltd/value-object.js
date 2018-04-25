@@ -80,6 +80,9 @@ ValueObject.prototype.with = function(newPropertyValues) {
       )
     }
   }
+  if (typeof instance._init === 'function') {
+    instance._init()
+  }
   freeze(instance)
   return instance
 }
