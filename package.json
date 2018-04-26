@@ -1,6 +1,6 @@
 {
   "name": "value-object",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "value-object.js - simple value objects",
   "main": "value-object.js",
   "scripts": {
