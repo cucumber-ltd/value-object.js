@@ -487,7 +487,9 @@ InvalidProperty.prototype.describe = function () {
 }
 
 function ValidationError(object, failures) {
-  Error.captureStackTrace(this, ValidationError)
+  if (Error.captureStackTrace) {
+    Error.captureStackTrace(this, ValidationError)
+  }
   this.object = object
   this.failures = failures
   this.message = functionName(object.constructor) + ' is invalid: ' + failures.describe()

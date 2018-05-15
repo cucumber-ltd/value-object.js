@@ -583,7 +583,7 @@ describe('ValueObject', () => {
 
       assertThrows(
         () => foo.dingbat = 'badger',
-        "Cannot add property dingbat, object is not extensible"
+        /is not extensible/
       )
     })
 
@@ -593,7 +593,7 @@ describe('ValueObject', () => {
 
       assertThrows(
         () => foo.ok = 'badger',
-        "Cannot assign to read only property 'ok' of object '#<Foo>'"
+        /read.only/
       )
     })
 
@@ -1108,7 +1108,7 @@ describe('ValueObject', () => {
         const foo = new Foo({ x: 'hello' })
         assertThrows(
           () => { foo.z = 'yeah' },
-          'Cannot add property z, object is not extensible'
+          /not extensible/
         )
       } finally {
         ValueObject.enableFreeze()
