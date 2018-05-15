@@ -7,6 +7,7 @@
     "test": "npm run eslint && npm run coverage",
     "eslint": "eslint src test",
     "mocha": "mocha",
+    "karma": "karma start --browsers Firefox,Chrome --single-run",
     "coverage": "node --harmony ./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha -- test"
   },
   "repository": {
