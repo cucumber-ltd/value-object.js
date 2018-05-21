@@ -926,11 +926,11 @@ describe('ValueObject', () => {
 
     it('converts null values of Schema properties', () => {
       class X extends ValueObject.define({ a: 'string' }) {}
-      class Y extends ValueObject.define({ b: X }) {}
+      class Y extends ValueObject.define({ b: X, c: { d: 'string' } }) {}
 
-      const y = new Y({ b: null })
+      const y = new Y({ b: null, c: null })
 
-      assert.equal(JSON.stringify(y.toPlainObject()), '{"b":null}')
+      assert.equal(JSON.stringify(y.toPlainObject()), '{"b":null,"c":null}')
     })
 
     it('converts constructor properties', () => {
