@@ -248,8 +248,13 @@ Schema.prototype.toPlainObject = function(instance) {
   var object = {}
   for (var propertyName in this.propertyTypes) {
     var property = this.propertyTypes[propertyName]
-    object[propertyName] = typeof property.toPlainObject === 'function' ?
-      property.toPlainObject(instance[propertyName]) : JSON.parse(JSON.stringify(instance[propertyName]))
+
+    if(instance[propertyName]) {
+      object[propertyName] = typeof property.toPlainObject === 'function' ?
+        property.toPlainObject(instance[propertyName]) : JSON.parse(JSON.stringify(instance[propertyName]))
+    } else {
+      object[propertyName] = null
+    }
   }
   return object
 }

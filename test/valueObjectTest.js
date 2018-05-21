@@ -933,6 +933,13 @@ describe('ValueObject', () => {
       assert.equal(JSON.stringify(y.toPlainObject()), '{"b":null}')
     })
 
+    it('converts null values of inline nested objects', () => {
+      class X extends ValueObject.define({ a: 'string', b: { c: 'string'} }) {}
+      const x = new X({ a: 'asd', b: null })
+
+      assert.equal(JSON.stringify(x.toPlainObject()), '{"a":"asd","b":null}')
+    })
+
     it('converts constructor properties', () => {
       function X() { this.z = 'hi' }
       class Y extends ValueObject.define({ x: X }) {}
