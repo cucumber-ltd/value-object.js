@@ -8,7 +8,11 @@ function assertThrows(fn, message, expose = () => {}) {
     throw new Error('Should have thrown an error')
   } catch (err) {
     assert(typeof err !== 'undefined', 'threw undefined!')
-    assert.equal(err.message, message)
+    if (message instanceof RegExp) {
+      assert(err.message.match(message))
+    } else {
+      assert.equal(err.message, message)
+    }
     expose(err)
   }
 }
