@@ -324,28 +324,28 @@ ArrayProp.prototype.describe = function() {
 ArrayProp.prototype.toJSON = function(instance) {
   if (instance === null) return null
   var elementType = this.elementType
-  if (typeof elementType.toJSON === 'function') {
-    return instance.map(function(element) {
-      return elementType.toJSON(element)
-    })
-  } else {
-    return instance.map(function(element) {
-      return element
-    })
-  }
+  return instance.map(
+    typeof elementType.toJSON === 'function'
+      ? function(element) {
+          return elementType.toJSON(element)
+        }
+      : function(element) {
+          return element
+        }
+  )
 }
 ArrayProp.prototype.toPlainObject = function(instance) {
   if (instance === null) return null
   var elementType = this.elementType
-  if (typeof elementType.toPlainObject === 'function') {
-    return instance.map(function(element) {
-      return elementType.toPlainObject(element)
-    })
-  } else {
-    return instance.map(function(element) {
-      return element
-    })
-  }
+  return instance.map(
+    typeof elementType.toPlainObject === 'function'
+      ? function(element) {
+          return elementType.toPlainObject(element)
+        }
+      : function(element) {
+          return element
+        }
+  )
 }
 
 function UntypedArrayProp() {}
@@ -542,6 +542,7 @@ InvalidProperty.prototype.describe = function() {
 }
 
 function ValidationError(object, failures) {
+  /* istanbul ignore next */
   if (Error.captureStackTrace) {
     Error.captureStackTrace(this, ValidationError)
   }
