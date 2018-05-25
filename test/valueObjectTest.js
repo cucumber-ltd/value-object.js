@@ -944,6 +944,22 @@ describe('ValueObject', () => {
       assert.equal(JSON.stringify(x.toPlainObject()), '{"a":[{"a":null,"b":[]}],"b":[1,2]}')
     })
 
+    it('converts null values of untyped array properties', () => {
+      class X extends ValueObject.define({ a: Array }) {}
+
+      const x = new X({ a: null })
+
+      assert.equal(JSON.stringify(x.toPlainObject()), '{"a":null}')
+    })
+
+    it('converts null values of typed array properties', () => {
+      class X extends ValueObject.define({ a: ['string'] }) {}
+
+      const x = new X({ a: null })
+
+      assert.equal(JSON.stringify(x.toPlainObject()), '{"a":null}')
+    })
+
     it('converts null values of Schema properties', () => {
       class X extends ValueObject.define({ a: 'string' }) {}
       class Y extends ValueObject.define({ b: X, c: { d: 'string' } }) {}
