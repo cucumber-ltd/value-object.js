@@ -1,0 +1,27 @@
+{
+  "extends": ["eslint:recommended", "plugin:node/recommended", "prettier"],
+  "plugins": ["node", "sort-requires"],
+  "rules": {
+    "eqeqeq": ["error", "always", { "null": "ignore" }],
+    "no-else-return": ["error", { "allowElseIf": false }],
+    "object-shorthand": ["error", "always"],
+    "quotes": ["error", "single", { "avoidEscape": true }],
+    "prefer-const": "error",
+    "node/no-unpublished-require": 0,
+    "no-process-exit": 0,
+    "no-return-await": "error",
+    "sort-requires/sort-requires": 2,
+    "node/shebang": 0,
+    "no-var": "error",
+    "prefer-template": "error"
+  },
+  "env": {
+    "node": true,
+    "es6": true,
+    "browser": true,
+    "mocha": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 5
+  }
+}

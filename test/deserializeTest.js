@@ -26,7 +26,8 @@ describe('ValueObject.deserializeForNamespaces([{}, {}])', () => {
   })
 
   it('throws when a constructor is undefined', () => {
-    assertThrows(() => ValueObject.deserializeForNamespaces([{}, undefined]),
+    assertThrows(
+      () => ValueObject.deserializeForNamespaces([{}, undefined]),
       'One of your namespaces is undefined.'
     )
   })
@@ -34,8 +35,8 @@ describe('ValueObject.deserializeForNamespaces([{}, {}])', () => {
   describe('.deserialize(json)', () => {
     it('throws when a constructor is missing', () => {
       const deserialize = ValueObject.deserializeForNamespaces([])
-      assertThrows(() => deserialize(
-        '{ "__type__": "Junk" }'),
+      assertThrows(
+        () => deserialize('{ "__type__": "Junk" }'),
         'Unable to deserialize an object with type "Junk". Make sure you register that constructor when building deserialize.'
       )
     })
@@ -51,7 +52,7 @@ describe('ValueObject.deserializeForNamespaces([{}, {}])', () => {
         toJSON() {
           return {
             __type__: this.constructor.name,
-            message: this.message,
+            message: this.message
           }
         }
       }
@@ -68,7 +69,7 @@ describe('ValueObject.deserializeForNamespaces([{}, {}])', () => {
 })
 
 describe('new ValueObject()', () => {
-  it("Creates ValueObject instances from nested values without __type__ annotations", () => {
+  it('Creates ValueObject instances from nested values without __type__ annotations', () => {
     class B extends ValueObject.define({
       o: 'string'
     }) {}
@@ -83,7 +84,7 @@ describe('new ValueObject()', () => {
     assert.equal(object.y.constructor, B)
   })
 
-  it("Creates ValueObject instances from nested values with array properties without __type__ annotations", () => {
+  it('Creates ValueObject instances from nested values with array properties without __type__ annotations', () => {
     class B extends ValueObject.define({
       o: 'string'
     }) {}

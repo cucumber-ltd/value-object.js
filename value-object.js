@@ -10,29 +10,25 @@ ValueObject.parseSchema = function(definition) {
   return properties
 }
 ValueObject.findPropertyType = function(declared) {
-  if (typeof declared === "string") {
+  if (typeof declared === 'string') {
     var prop = ValueObject.propertyTypes[declared]
     if (prop) return prop
   } else if (Array.isArray(declared)) {
     if (declared.length != 1) {
       throw new ValueObjectError('Expected array property definition with single type element')
     }
-    return new ArrayProp(
-      ValueObject.findPropertyType(declared[0])
-    )
+    return new ArrayProp(ValueObject.findPropertyType(declared[0]))
   } else if (declared === Array) {
     return new UntypedArrayProp()
   } else if (declared === Date) {
     return new DateProp()
-  } else if (typeof declared === "object") {
+  } else if (typeof declared === 'object') {
     return new Schema(ValueObject.parseSchema(declared))
-  } else if (typeof declared === "function") {
+  } else if (typeof declared === 'function') {
     return new ConstructorProp(declared)
   }
   var inspected = typeof declared === 'string' ? '"' + declared + '"' : declared
-  throw new ValueObjectError(
-    "Property defined as unsupported type (" + inspected + ")"
-  )
+  throw new ValueObjectError('Property defined as unsupported type (' + inspected + ')')
 }
 ValueObject.define = function(properties) {
   var VO = ValueObject
@@ -45,9 +41,7 @@ ValueObject.define = function(properties) {
       ValueObject.prototype[key] = VO.prototype[key]
     }
     ValueObject.prototype.constructor = ValueObject
-    ValueObject.schema = new Schema(
-      VO.parseSchema(properties)
-    )
+    ValueObject.schema = new Schema(VO.parseSchema(properties))
     return ValueObject
   })()
 }
@@ -75,9 +69,7 @@ ValueObject.prototype.with = function(newPropertyValues) {
       if (!property) {
         Constructor.schema.assignProperties(instance, [extend(this, newPropertyValues)])
       }
-      instance[newPropertyName] = property.coerce(
-        newPropertyValues[newPropertyName]
-      )
+      instance[newPropertyName] = property.coerce(newPropertyValues[newPropertyName])
     }
   }
   if (typeof instance._init === 'function') {
@@ -95,22 +87,22 @@ ValueObject.prototype.toPlainObject = function() {
 ValueObject.prototype.validate = function() {
   var failures = new ValidationFailures()
   this.addValidationFailures(failures)
-  if (failures.any())
-    throw new ValidationError(this, failures)
+  if (failures.any()) throw new ValidationError(this, failures)
 }
 ValueObject.prototype.addValidationFailures = function(/* failures */) {
   // override this in subclasses e.g:
   // failures.for('someProperty').add('Some message')
 }
 ValueObject.deserializeForNamespaces = function(namespaces) {
-  var constructors = namespaces.reduce(function (ctors, namespace) {
-    if (!namespace)
-      throw new ValueObjectError('One of your namespaces is undefined.')
+  var constructors = namespaces.reduce(function(ctors, namespace) {
+    if (!namespace) throw new ValueObjectError('One of your namespaces is undefined.')
 
     return extend(ctors, namespace)
   }, {})
 
-  return function(json) { return JSON.parse(json, revive) }
+  return function(json) {
+    return JSON.parse(json, revive)
+  }
 
   function revive(key, value) {
     if (!value || !value.__type__) return value
@@ -118,8 +110,12 @@ ValueObject.deserializeForNamespaces = function(namespaces) {
     var constructor = constructors[value.__type__]
 
     if (!constructor)
-      throw new ValueObjectError('Unable to deserialize an object with type "' + value.__type__ + '".' +
-      " Make sure you register that constructor when building deserialize.")
+      throw new ValueObjectError(
+        'Unable to deserialize an object with type "' +
+          value.__type__ +
+          '".' +
+          ' Make sure you register that constructor when building deserialize.'
+      )
 
     if (typeof constructor.fromJSON === 'function') {
       return constructor.fromJSON(value)
@@ -155,39 +151,62 @@ Schema.prototype.extend = function(properties) {
 }
 Schema.prototype.assignProperties = function(assignee, args) {
   if (args.length != 1) {
-    throw new ValueObjectError(functionName(assignee.constructor) + '({' + this.describePropertyTypes() +
-      '}) called with ' + args.length + ' arguments')
+    throw new ValueObjectError(
+      functionName(assignee.constructor) +
+        '({' +
+        this.describePropertyTypes() +
+        '}) called with ' +
+        args.length +
+        ' arguments'
+    )
   }
   var arg = args[0]
   if (typeof arg !== 'object') {
-    throw new ValueObjectError(functionName(assignee.constructor) + '({' + this.describePropertyTypes() +
-      '}) called with ' + inspectType(arg) + ' (expected object)')
+    throw new ValueObjectError(
+      functionName(assignee.constructor) +
+        '({' +
+        this.describePropertyTypes() +
+        '}) called with ' +
+        inspectType(arg) +
+        ' (expected object)'
+    )
   }
   delete arg.__type__
   if (!this.validateAssignedPropertyNames(arg)) {
-    throw new ValueObjectError(functionName(assignee.constructor) + '({' + this.describePropertyTypes() +
-      '}) called with {' + keys(arg).join(', ') + '} ' +
-      '(' + describeDiffereceInKeys(this.propertyTypes, arg) + ')')
+    throw new ValueObjectError(
+      functionName(assignee.constructor) +
+        '({' +
+        this.describePropertyTypes() +
+        '}) called with {' +
+        keys(arg).join(', ') +
+        '} ' +
+        '(' +
+        describeDiffereceInKeys(this.propertyTypes, arg) +
+        ')'
+    )
   }
   var failures = []
   for (var propertyName in this.propertyTypes) {
     try {
-      assignee[propertyName] = this.propertyTypes[propertyName].coerce(
-        arg[propertyName]
-      )
+      assignee[propertyName] = this.propertyTypes[propertyName].coerce(arg[propertyName])
     } catch (e) {
       failures.push({ propertyName: propertyName, error: e })
     }
   }
   if (failures.length > 0) {
     throw new ValueObjectError(
-      functionName(assignee.constructor) + '({' + this.describePropertyTypes()  +
+      functionName(assignee.constructor) +
+        '({' +
+        this.describePropertyTypes() +
         '}) called with invalid types {' +
-        this.describePropertyValues(arg) + '} - ' +
-        failures.map(function(failure) {
-          return '"' + failure.propertyName + '" is invalid (' + failure.error.message + ')'
-        }).join(', ')
-      )
+        this.describePropertyValues(arg) +
+        '} - ' +
+        failures
+          .map(function(failure) {
+            return '"' + failure.propertyName + '" is invalid (' + failure.error.message + ')'
+          })
+          .join(', ')
+    )
   }
   if (typeof assignee._init === 'function') {
     assignee._init()
@@ -195,8 +214,10 @@ Schema.prototype.assignProperties = function(assignee, args) {
   freeze(assignee)
 }
 Schema.prototype.validateAssignedPropertyNames = function(assignedProperties) {
-  return this.areAllPropertyNamesAssigned(assignedProperties) &&
+  return (
+    this.areAllPropertyNamesAssigned(assignedProperties) &&
     this.areAllAssignedPropertyNamesValid(assignedProperties)
+  )
 }
 Schema.prototype.areAllAssignedPropertyNamesValid = function(assignedProperties) {
   for (var j in assignedProperties) {
@@ -237,8 +258,11 @@ Schema.prototype.areEqual = function(a, b) {
   }
   for (var propertyName in this.propertyTypes) {
     var property = this.propertyTypes[propertyName]
-    if (typeof a === 'undefined' || typeof b === 'undefined' ||
-      !property.areEqual(a[propertyName], b[propertyName])) {
+    if (
+      typeof a === 'undefined' ||
+      typeof b === 'undefined' ||
+      !property.areEqual(a[propertyName], b[propertyName])
+    ) {
       return false
     }
   }
@@ -248,11 +272,11 @@ Schema.prototype.toPlainObject = function(instance) {
   var object = {}
   for (var propertyName in this.propertyTypes) {
     var property = this.propertyTypes[propertyName]
-    object[propertyName] = instance[propertyName] ?
-      typeof property.toPlainObject === 'function' ?
-        property.toPlainObject(instance[propertyName]) :
-        JSON.parse(JSON.stringify(instance[propertyName])) :
-        instance[propertyName]
+    object[propertyName] = instance[propertyName]
+      ? typeof property.toPlainObject === 'function'
+        ? property.toPlainObject(instance[propertyName])
+        : JSON.parse(JSON.stringify(instance[propertyName]))
+      : instance[propertyName]
   }
   return object
 }
@@ -261,10 +285,12 @@ Schema.prototype.toJSON = function(instance) {
   var json = {}
   for (var propertyName in this.propertyTypes) {
     var property = this.propertyTypes[propertyName]
-    json[propertyName] = typeof property.toJSON === 'function' ?
-      property.toJSON(instance[propertyName]) : instance[propertyName]
+    json[propertyName] =
+      typeof property.toJSON === 'function'
+        ? property.toJSON(instance[propertyName])
+        : instance[propertyName]
   }
-   /* istanbul ignore next */
+  /* istanbul ignore next */
   if (instance.constructor.name) json.__type__ = instance.constructor.name
   return json
 }
@@ -277,7 +303,9 @@ function ArrayProp(elementType) {
 }
 ArrayProp.prototype.coerce = function(value) {
   if (value === null) return null
-  if (!Array.isArray(value)) { throw new ValueObjectError('Expected array, was ' + inspectType(value)) }
+  if (!Array.isArray(value)) {
+    throw new ValueObjectError('Expected array, was ' + inspectType(value))
+  }
   var elementType = this.elementType
   return value.map(function(element) {
     return elementType.coerce(element)
@@ -301,7 +329,9 @@ ArrayProp.prototype.toJSON = function(instance) {
       return elementType.toJSON(element)
     })
   } else {
-    return instance.map(function (element) { return element })
+    return instance.map(function(element) {
+      return element
+    })
   }
 }
 ArrayProp.prototype.toPlainObject = function(instance) {
@@ -312,14 +342,18 @@ ArrayProp.prototype.toPlainObject = function(instance) {
       return elementType.toPlainObject(element)
     })
   } else {
-    return instance.map(function (element) { return element })
+    return instance.map(function(element) {
+      return element
+    })
   }
 }
 
 function UntypedArrayProp() {}
 UntypedArrayProp.prototype.coerce = function(value) {
   if (value === null) return null
-  if (!Array.isArray(value)) { throw new ValueObjectError('Expected array, was ' + inspectType(value)) }
+  if (!Array.isArray(value)) {
+    throw new ValueObjectError('Expected array, was ' + inspectType(value))
+  }
   return value
 }
 UntypedArrayProp.prototype.areEqual = function(a, b) {
@@ -336,14 +370,18 @@ UntypedArrayProp.prototype.describe = function() {
   return 'Array'
 }
 UntypedArrayProp.prototype.toJSON = function(instance) {
-  return instance === null ? null : instance.map(function(element, index) {
-    return typeof element.toJSON === 'function' ? element.toJSON(index) : element
-  })
+  return instance === null
+    ? null
+    : instance.map(function(element, index) {
+        return typeof element.toJSON === 'function' ? element.toJSON(index) : element
+      })
 }
 UntypedArrayProp.prototype.toPlainObject = function(instance) {
-  return instance === null ? null : instance.map(function(element) {
-    return typeof element.toPlainObject === 'function' ? element.toPlainObject() : element
-  })
+  return instance === null
+    ? null
+    : instance.map(function(element) {
+        return typeof element.toPlainObject === 'function' ? element.toPlainObject() : element
+      })
 }
 
 function ConstructorProp(ctor) {
@@ -360,7 +398,9 @@ ConstructorProp.prototype.coerce = function(value) {
     if (value && value.constructor === Object) {
       return new Constructor(value)
     }
-    throw new ValueObjectError('Expected ' + functionName(Constructor) + ', was ' + inspectType(value))
+    throw new ValueObjectError(
+      'Expected ' + functionName(Constructor) + ', was ' + inspectType(value)
+    )
   }
   return value
 }
@@ -372,13 +412,15 @@ ConstructorProp.prototype.describe = function() {
 }
 ConstructorProp.prototype.toJSON = function(instance) {
   if (instance === null) return null
-  return typeof instance.toJSON === 'function' ?
-    instance.toJSON() : JSON.parse(JSON.stringify(instance))
+  return typeof instance.toJSON === 'function'
+    ? instance.toJSON()
+    : JSON.parse(JSON.stringify(instance))
 }
 ConstructorProp.prototype.toPlainObject = function(instance) {
   if (instance === null) return null
-  return typeof instance.toPlainObject === 'function' ?
-    instance.toPlainObject() : JSON.parse(JSON.stringify(instance))
+  return typeof instance.toPlainObject === 'function'
+    ? instance.toPlainObject()
+    : JSON.parse(JSON.stringify(instance))
 }
 
 function DateProp() {}
@@ -420,16 +462,24 @@ Primitive.prototype.describe = function() {
   return this.name
 }
 
-function ObjectProp() { Primitive.call(this, Object, 'object') }
+function ObjectProp() {
+  Primitive.call(this, Object, 'object')
+}
 ObjectProp.prototype = new Primitive(Object, 'object')
 ObjectProp.prototype.areEqual = function(a, b) {
   return JSON.stringify(a) === JSON.stringify(b)
 }
 
 function AnyProp() {}
-AnyProp.prototype.coerce = function(value) { return value }
-AnyProp.prototype.areEqual = function(a, b) { return a == b }
-AnyProp.prototype.describe = function() { return 'any' }
+AnyProp.prototype.coerce = function(value) {
+  return value
+}
+AnyProp.prototype.areEqual = function(a, b) {
+  return a == b
+}
+AnyProp.prototype.describe = function() {
+  return 'any'
+}
 
 ValueObject.propertyTypes = {
   string: new Primitive(String, 'string'),
@@ -447,21 +497,23 @@ ValidationFailures.prototype = {
     return new ValidationFailuresForProperty(this, property)
   },
 
-  add: function (failure) {
+  add: function(failure) {
     this.failures.push(typeof failure == 'object' ? failure : new InvalidObject(failure))
     return this
   },
 
-  any: function () {
+  any: function() {
     return this.failures.length > 0
   },
 
-  map: function () {
+  map: function() {
     return this.failures.map.apply(this.failures, arguments)
   },
 
   describe: function() {
-    return this.map(function(failure) { return failure.describe() }).join(', ')
+    return this.map(function(failure) {
+      return failure.describe()
+    }).join(', ')
   }
 }
 
@@ -469,7 +521,7 @@ function ValidationFailuresForProperty(failures, property) {
   this.failures = failures
   this.property = property
 }
-ValidationFailuresForProperty.prototype.add = function (message) {
+ValidationFailuresForProperty.prototype.add = function(message) {
   this.failures.add(new InvalidProperty(this.property, message))
   return this
 }
@@ -485,7 +537,7 @@ function InvalidProperty(property, message) {
   this.property = property
   this.message = message
 }
-InvalidProperty.prototype.describe = function () {
+InvalidProperty.prototype.describe = function() {
   return this.property + ' ' + this.message
 }
 
@@ -500,11 +552,11 @@ function ValidationError(object, failures) {
 ValidationError.prototype = new Error()
 
 function keys(o) {
-  var k = [];
+  var k = []
   for (var key in o) {
     k.push(key)
   }
-  return k;
+  return k
 }
 
 function describeDiffereceInKeys(expected, actual) {
@@ -512,28 +564,36 @@ function describeDiffereceInKeys(expected, actual) {
   var actualKeys = keys(actual).sort()
   var missingKeys = expectedKeys.filter(arrayIsMissing(actualKeys))
   var extraKeys = actualKeys.filter(arrayIsMissing(expectedKeys))
-  return missingKeys.map(function (k) { return '"' + k + '" is missing' }).concat(
-    extraKeys.map(function (k) { return '"' + k + '" is unexpected' })
-  ).join(', ')
+  return missingKeys
+    .map(function(k) {
+      return '"' + k + '" is missing'
+    })
+    .concat(
+      extraKeys.map(function(k) {
+        return '"' + k + '" is unexpected'
+      })
+    )
+    .join(', ')
 }
 
 function arrayIsMissing(array) {
   return function(item) {
-    for (var i = 0; i < array.length; i++) if (array[i] == item) return false;
+    for (var i = 0; i < array.length; i++) if (array[i] == item) return false
     return true
   }
 }
 
 function extend(extendee, extender) {
-  var extended = {}, prop
+  var extended = {},
+    prop
   for (prop in extendee) {
     if (Object.prototype.hasOwnProperty.call(extendee, prop)) {
-      extended[prop] = extendee[prop];
+      extended[prop] = extendee[prop]
     }
   }
   for (prop in extender) {
     if (Object.prototype.hasOwnProperty.call(extender, prop)) {
-      extended[prop] = extender[prop];
+      extended[prop] = extender[prop]
     }
   }
   return extended
@@ -541,23 +601,29 @@ function extend(extendee, extender) {
 
 function inspectType(o) {
   if (o === null) return 'null'
-  var t = typeof o;
-  if (t !== 'object') return t;
+  var t = typeof o
+  if (t !== 'object') return t
   return functionName(o.constructor) === 'Object' ? 'object' : functionName(o.constructor)
 }
 
 function ValueObjectError(message) {
-  this.name = 'ValueObjectError';
-  this.message = message;
-  this.stack = (new Error(message)).stack;
+  this.name = 'ValueObjectError'
+  this.message = message
+  this.stack = new Error(message).stack
 }
-ValueObjectError.prototype = new Error;
+ValueObjectError.prototype = new Error()
 ValueObject.ValueObjectError = ValueObjectError
 
 function disabledFreeze() {}
 var enabledFreeze = 'freeze' in Object ? Object.freeze : /* istanbul ignore next */ disabledFreeze
 var freeze = enabledFreeze
-var functionName = ValueObject.name ? function(fn) { return fn.name } : /* istanbul ignore next */ function() { return 'ValueObject' }
+var functionName = ValueObject.name
+  ? function(fn) {
+      return fn.name
+    }
+  : /* istanbul ignore next */ function() {
+      return 'ValueObject'
+    }
 
 function Scalar(value) {
   ValueObject.call(this, typeof value === 'string' ? { value: value } : value)
@@ -569,8 +635,12 @@ Scalar.prototype.valueOf = function() {
   return this.value
 }
 Scalar.prototype.inspect = function(_, options) {
-  return functionName(this.constructor) + " { value: '" +
-    (options.stylize ? options.stylize(this.value, 'string') : this.value) + "' }"
+  return (
+    functionName(this.constructor) +
+    " { value: '" +
+    (options.stylize ? options.stylize(this.value, 'string') : this.value) +
+    "' }"
+  )
 }
 Scalar.prototype.uriEncoded = function() {
   return encodeURI(this.value)
