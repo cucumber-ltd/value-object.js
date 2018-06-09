@@ -196,7 +196,7 @@ Schema.prototype.assignProperties = function(assignee, args) {
     if (coercionResult.failureMessage) {
       failures.push({
         propertyName: propertyName,
-        error: new ValueObjectError(coercionResult.failureMessage)
+        failureMessage: coercionResult.failureMessage
       })
     } else {
       assignee[propertyName] = coercionResult.value
@@ -212,7 +212,7 @@ Schema.prototype.assignProperties = function(assignee, args) {
         '} - ' +
         failures
           .map(function(failure) {
-            return '"' + failure.propertyName + '" is invalid (' + failure.error.message + ')'
+            return '"' + failure.propertyName + '" is invalid (' + failure.failureMessage + ')'
           })
           .join(', ')
     )
