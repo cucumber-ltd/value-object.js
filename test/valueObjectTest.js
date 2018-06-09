@@ -317,15 +317,15 @@ describe('ValueObject', () => {
       class X {}
       const a = 666
       const b = new Date()
-      const c = -1
-      class Foo extends ValueObject.define({ a: 'string', b: X, c: 'object' }) {}
+      const c = [1, undefined, undefined]
+      class Foo extends ValueObject.define({ a: 'string', b: X, c: ['number'] }) {}
       assertThrows(
         () => new Foo({ a, b, c }),
-        'Foo({a:string, b:X, c:object}) ' +
-          'called with invalid types {a:number, b:Date, c:number} - ' +
+        'Foo({a:string, b:X, c:[number]}) ' +
+          'called with invalid types {a:number, b:Date, c:Array} - ' +
           '"a" is invalid (Expected string, was number), ' +
           '"b" is invalid (Expected X, was Date), ' +
-          '"c" is invalid (Expected object, was number)',
+          '"c" is invalid ([1] is invalid (Expected number, was undefined), [2] is invalid (Expected number, was undefined))',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })

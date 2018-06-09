@@ -320,15 +320,22 @@ ArrayProp.prototype.coerce = function(value) {
     return { failureMessage: 'Expected array, was ' + inspectType(value) }
   }
   var elementType = this.elementType
-  try {
-    return {
-      value: value.map(function(element) {
-        return elementType.coerce(element).value
-      })
+  var failures = []
+  var convertedValues = []
+  for (var i = 0; i < value.length; i++) {
+    var coercionResult = elementType.coerce(value[i])
+    if (coercionResult.failureMessage) {
+      failures.push('[' + i + '] is invalid (' + coercionResult.failureMessage + ')')
+    } else {
+      convertedValues.push(coercionResult.value)
     }
-  } catch (e) {
-    return { failureMessage: e.message }
   }
+  if (failures.length > 0) {
+    return {
+      failureMessage: failures.join(', ')
+    }
+  }
+  return { value: convertedValues }
 }
 ArrayProp.prototype.areEqual = function(a, b) {
   if (a.length != b.length) return false
