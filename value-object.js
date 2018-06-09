@@ -456,22 +456,18 @@ ConstructorProp.prototype.toPlainObject = function(instance) {
 function DateProp() {}
 DateProp.prototype.coerce = function(value) {
   if (value === null) return { value: null }
-  try {
-    var date
-    if (value instanceof Date) {
-      date = value
-    } else if (typeof value === 'string' || typeof value === 'number') {
-      date = new Date(value)
-    } else {
-      return { failureMessage: 'Expected Date, string or number, was ' + inspectType(value) }
-    }
-    if (!isFinite(date)) {
-      return { failureMessage: 'Invalid Date' }
-    }
-    return { value: date }
-  } catch (e) {
-    return { failureMessage: e.message }
+  var date
+  if (value instanceof Date) {
+    date = value
+  } else if (typeof value === 'string' || typeof value === 'number') {
+    date = new Date(value)
+  } else {
+    return { failureMessage: 'Expected Date, string or number, was ' + inspectType(value) }
   }
+  if (!isFinite(date)) {
+    return { failureMessage: 'Invalid Date' }
+  }
+  return { value: date }
 }
 DateProp.prototype.areEqual = function(a, b) {
   return a.getTime() == b.getTime()
