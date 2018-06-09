@@ -70,8 +70,8 @@ ValueObject.prototype.with = function(newPropertyValues) {
         Constructor.schema.assignProperties(instance, [extend(this, newPropertyValues)])
       }
       var coercionResult = property.coerce(newPropertyValues[newPropertyName])
-      if (coercionResult.error) {
-        throw coercionResult.error
+      if (coercionResult.failureMessage) {
+        throw new ValueObjectError(coercionResult.failureMessage)
       } else {
         instance[newPropertyName] = coercionResult.value
       }
@@ -193,8 +193,11 @@ Schema.prototype.assignProperties = function(assignee, args) {
   var failures = []
   for (var propertyName in this.propertyTypes) {
     var coercionResult = this.propertyTypes[propertyName].coerce(arg[propertyName])
-    if (coercionResult.error) {
-      failures.push({ propertyName: propertyName, error: coercionResult.error })
+    if (coercionResult.failureMessage) {
+      failures.push({
+        propertyName: propertyName,
+        error: new ValueObjectError(coercionResult.failureMessage)
+      })
     } else {
       assignee[propertyName] = coercionResult.value
     }
@@ -259,7 +262,7 @@ Schema.prototype.coerce = function(value) {
   try {
     return { value: new Constructor(value) }
   } catch (e) {
-    return { error: e }
+    return { failureMessage: e.message }
   }
 }
 Schema.prototype.areEqual = function(a, b) {
@@ -314,7 +317,7 @@ function ArrayProp(elementType) {
 ArrayProp.prototype.coerce = function(value) {
   if (value === null) return { value: null }
   if (!Array.isArray(value)) {
-    return { error: new ValueObjectError('Expected array, was ' + inspectType(value)) }
+    return { failureMessage: 'Expected array, was ' + inspectType(value) }
   }
   var elementType = this.elementType
   try {
@@ -324,7 +327,7 @@ ArrayProp.prototype.coerce = function(value) {
       })
     }
   } catch (e) {
-    return { error: e }
+    return { failureMessage: e.message }
   }
 }
 ArrayProp.prototype.areEqual = function(a, b) {
@@ -368,7 +371,7 @@ function UntypedArrayProp() {}
 UntypedArrayProp.prototype.coerce = function(value) {
   if (value === null) return { value: null }
   if (!Array.isArray(value)) {
-    return { error: new ValueObjectError('Expected array, was ' + inspectType(value)) }
+    return { failureMessage: 'Expected array, was ' + inspectType(value) }
   }
   return { value: value }
 }
@@ -415,12 +418,12 @@ ConstructorProp.prototype.coerce = function(value) {
       if (value && value.constructor === Object) {
         return { value: new Constructor(value) }
       }
-      throw new ValueObjectError(
-        'Expected ' + functionName(Constructor) + ', was ' + inspectType(value)
-      )
+      return {
+        failureMessage: 'Expected ' + functionName(Constructor) + ', was ' + inspectType(value)
+      }
     }
   } catch (e) {
-    return { error: e }
+    return { failureMessage: e.message }
   }
   return { value: value }
 }
@@ -453,14 +456,14 @@ DateProp.prototype.coerce = function(value) {
     } else if (typeof value === 'string' || typeof value === 'number') {
       date = new Date(value)
     } else {
-      throw new ValueObjectError('Expected Date, string or number, was ' + inspectType(value))
+      return { failureMessage: 'Expected Date, string or number, was ' + inspectType(value) }
     }
     if (!isFinite(date)) {
-      throw new ValueObjectError('Invalid Date')
+      return { failureMessage: 'Invalid Date' }
     }
     return { value: date }
   } catch (e) {
-    return { error: e }
+    return { failureMessage: e.message }
   }
 }
 DateProp.prototype.areEqual = function(a, b) {
@@ -477,11 +480,7 @@ function Primitive(cast, name) {
 Primitive.prototype.coerce = function(value) {
   if (value === null) return { value: null }
   if (typeof value === this.name) return { value: value }
-  try {
-    throw new ValueObjectError('Expected ' + this.name + ', was ' + inspectType(value))
-  } catch (e) {
-    return { error: e }
-  }
+  return { failureMessage: 'Expected ' + this.name + ', was ' + inspectType(value) }
 }
 Primitive.prototype.areEqual = function(a, b) {
   return this.cast(a) === this.cast(b)
