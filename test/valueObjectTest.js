@@ -700,7 +700,7 @@ describe('ValueObject', () => {
       ValueObject.definePropertyType('money', {
         coerce(value) {
           const parts = value.split(' ')
-          return { amount: Number(parts[0]), currency: parts[1] }
+          return { value: { amount: Number(parts[0]), currency: parts[1] } }
         },
 
         areEqual(a, b) {
