@@ -71,7 +71,7 @@ ValueObject.prototype.with = function(newPropertyValues) {
       }
       var coercionResult = property.coerce(newPropertyValues[newPropertyName])
       if (coercionResult.failureMessage) {
-        throw new ValueObjectError(coercionResult.failureMessage)
+        Constructor.schema.assignProperties(instance, [extend(this, newPropertyValues)])
       } else {
         instance[newPropertyName] = coercionResult.value
       }
@@ -416,21 +416,17 @@ function ConstructorProp(ctor) {
 ConstructorProp.prototype.coerce = function(value) {
   if (value === null) return { value: null }
   var Constructor = this.ctor
-  try {
-    if (!(value instanceof Constructor)) {
-      if (typeof Constructor.fromJSON === 'function') {
-        var properties = Constructor.fromJSON(value)
-        return { value: new Constructor(properties) }
-      }
-      if (value && value.constructor === Object) {
-        return { value: new Constructor(value) }
-      }
-      return {
-        failureMessage: 'Expected ' + functionName(Constructor) + ', was ' + inspectType(value)
-      }
+  if (!(value instanceof Constructor)) {
+    if (typeof Constructor.fromJSON === 'function') {
+      var properties = Constructor.fromJSON(value)
+      return { value: new Constructor(properties) }
     }
-  } catch (e) {
-    return { failureMessage: e.message }
+    if (value && value.constructor === Object) {
+      return { value: new Constructor(value) }
+    }
+    return {
+      failureMessage: 'Expected ' + functionName(Constructor) + ', was ' + inspectType(value)
+    }
   }
   return { value: value }
 }
