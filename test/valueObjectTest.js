@@ -83,7 +83,11 @@ describe('ValueObject', () => {
 
       assertThrows(
         () => new Foo({ a: 'yep', b: undefined }),
-        'Foo({a:string, b:string}) called with invalid types {a:string, b:undefined} - "b" is invalid (Expected string, was undefined)',
+        'Foo was constructed with invalid property values\n' +
+          '  Expected: { a:string, b:string }\n' +
+          '  Actual:   { a:string, b:undefined }\n' +
+          '  b is invalid:\n' +
+          '    Expected string, was undefined',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
@@ -95,15 +99,23 @@ describe('ValueObject', () => {
 
       assertThrows(
         () => new Foo({ bar: new Bar({ baz: undefined }) }),
-        'Bar({baz:Baz}) called with invalid types {baz:undefined} - "baz" is invalid (Expected Baz, was undefined)',
+        'Bar was constructed with invalid property values\n' +
+          '  Expected: { baz:Baz }\n' +
+          '  Actual:   { baz:undefined }\n' +
+          '  baz is invalid:\n' +
+          '    Expected Baz, was undefined',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
 
     it('fails when instantiated with zero arguments', () => {
       class Foo extends ValueObject.define({ b: 'string', a: ['string'] }) {}
-      assertThrows(() => new Foo(), 'Foo({b:string, a:[string]}) called with 0 arguments', error =>
-        assert(error instanceof ValueObject.ValueObjectError)
+      assertThrows(
+        () => new Foo(),
+        'Foo was constructed with invalid property values\n' +
+          '  Expected: { b:string, a:[string] }\n' +
+          '  Actual:   { 0 arguments }',
+        error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
 
@@ -111,7 +123,9 @@ describe('ValueObject', () => {
       class Foo extends ValueObject.define({ b: 'string', a: 'string' }) {}
       assertThrows(
         () => new Foo({ a: 'ok' }, null),
-        'Foo({b:string, a:string}) called with 2 arguments',
+        'Foo was constructed with invalid property values\n' +
+          '  Expected: { b:string, a:string }\n' +
+          '  Actual:   { 2 arguments }',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
@@ -123,7 +137,11 @@ describe('ValueObject', () => {
       const d = 'D'
       assertThrows(
         () => new WantsThreeProps({ a, d, b }),
-        'WantsThreeProps({c:string, a:string, b:string}) called with {a, d, b} ("c" is missing, "d" is unexpected)',
+        'WantsThreeProps was constructed with invalid property values\n' +
+          '  Expected: { c:string, a:string, b:string }\n' +
+          '  Actual:   { a:string, b:string, d:string }\n' +
+          '  c is missing\n' +
+          '  d is unexpected',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
@@ -132,8 +150,14 @@ describe('ValueObject', () => {
       class WantsNestedProps extends ValueObject.define({ x: { y: 'string' } }) {}
       assertThrows(
         () => new WantsNestedProps({ x: {} }),
-        'WantsNestedProps({x:{y:string}}) called with invalid types {x:object} - ' +
-          '"x" is invalid (Struct({y:string}) called with {} ("y" is missing))',
+        'WantsNestedProps was constructed with invalid property values\n' +
+          '  Expected: { x:{y:string} }\n' +
+          '  Actual:   { x:object }\n' +
+          '  x is invalid:\n' +
+          '    Struct was constructed with invalid property values\n' +
+          '      Expected: { y:string }\n' +
+          '      Actual:   {  }\n' +
+          '      y is missing',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
@@ -142,8 +166,14 @@ describe('ValueObject', () => {
       class WantsNestedProps extends ValueObject.define({ x: { y: 'string' } }) {}
       assertThrows(
         () => new WantsNestedProps({ x: 'zomg' }),
-        'WantsNestedProps({x:{y:string}}) called with invalid types {x:string} - ' +
-          '"x" is invalid (Struct({y:string}) called with string (expected object))',
+        'WantsNestedProps was constructed with invalid property values\n' +
+          '  Expected: { x:{y:string} }\n' +
+          '  Actual:   { x:string }\n' +
+          '  x is invalid:\n' +
+          '    Struct was constructed with invalid property values\n' +
+          '      Expected: { y:string }\n' +
+          '      Actual:   { <string value> }\n' +
+          '      expected object with property values',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
@@ -153,7 +183,11 @@ describe('ValueObject', () => {
       const a = 'A'
       assertThrows(
         () => new WantsOneProp({ a, b: '1', c: '2' }),
-        'WantsOneProp({a:string}) called with {a, b, c} ("b" is unexpected, "c" is unexpected)',
+        'WantsOneProp was constructed with invalid property values\n' +
+          '  Expected: { a:string }\n' +
+          '  Actual:   { a:string, b:string, c:string }\n' +
+          '  b is unexpected\n' +
+          '  c is unexpected',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
@@ -164,7 +198,11 @@ describe('ValueObject', () => {
 
       assertThrows(
         () => new Foo({ date }),
-        'Foo({date:Date}) called with invalid types {date:Date} - "date" is invalid (Invalid Date)',
+        'Foo was constructed with invalid property values\n' +
+          '  Expected: { date:Date }\n' +
+          '  Actual:   { date:Date }\n' +
+          '  date is invalid:\n' +
+          '    Invalid Date',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
@@ -175,7 +213,11 @@ describe('ValueObject', () => {
 
       assertThrows(
         () => new Foo({ date }),
-        'Foo({date:Date}) called with invalid types {date:object} - "date" is invalid (Expected Date, string or number, was object)',
+        'Foo was constructed with invalid property values\n' +
+          '  Expected: { date:Date }\n' +
+          '  Actual:   { date:object }\n' +
+          '  date is invalid:\n' +
+          '    Expected Date, string or number, was object',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
@@ -263,8 +305,13 @@ describe('ValueObject', () => {
       const b = 3
       assertThrows(
         () => new Foo({ b, a }),
-        'Foo({a:number, b:string}) called with invalid types {a:string, b:number} - ' +
-          '"a" is invalid (Expected number, was string), "b" is invalid (Expected string, was number)',
+        'Foo was constructed with invalid property values\n' +
+          '  Expected: { a:number, b:string }\n' +
+          '  Actual:   { a:string, b:number }\n' +
+          '  a is invalid:\n' +
+          '    Expected number, was string\n' +
+          '  b is invalid:\n' +
+          '    Expected string, was number',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
@@ -274,7 +321,11 @@ describe('ValueObject', () => {
 
       assertThrows(
         () => new Foo({ a: new Date() }),
-        'Foo({a:Array}) called with invalid types {a:Date} - "a" is invalid (Expected array, was Date)',
+        'Foo was constructed with invalid property values\n' +
+          '  Expected: { a:Array }\n' +
+          '  Actual:   { a:Date }\n' +
+          '  a is invalid:\n' +
+          '    Expected array, was Date',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
@@ -306,9 +357,11 @@ describe('ValueObject', () => {
       const e = null
       assertThrows(
         () => new Foo({ b, a, c, d, e }),
-        'Foo({a:string, b:Child, c:string, d:boolean, e:any}) ' +
-          'called with invalid types {a:string, b:WrongChild, c:null, d:boolean, e:null} - ' +
-          '"b" is invalid (Expected Child, was WrongChild)',
+        'Foo was constructed with invalid property values\n' +
+          '  Expected: { a:string, b:Child, c:string, d:boolean, e:any }\n' +
+          '  Actual:   { a:string, b:WrongChild, c:null, d:boolean, e:null }\n' +
+          '  b is invalid:\n' +
+          '    Expected Child, was WrongChild',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
@@ -321,11 +374,18 @@ describe('ValueObject', () => {
       class Foo extends ValueObject.define({ a: 'string', b: X, c: ['number'] }) {}
       assertThrows(
         () => new Foo({ a, b, c }),
-        'Foo({a:string, b:X, c:[number]}) ' +
-          'called with invalid types {a:number, b:Date, c:Array} - ' +
-          '"a" is invalid (Expected string, was number), ' +
-          '"b" is invalid (Expected X, was Date), ' +
-          '"c" is invalid ([1] is invalid (Expected number, was undefined), [2] is invalid (Expected number, was undefined))',
+        'Foo was constructed with invalid property values\n' +
+          '  Expected: { a:string, b:X, c:[number] }\n' +
+          '  Actual:   { a:number, b:Date, c:Array }\n' +
+          '  a is invalid:\n' +
+          '    Expected string, was number\n' +
+          '  b is invalid:\n' +
+          '    Expected X, was Date\n' +
+          '  c is invalid:\n' +
+          '    [1] is invalid:\n' +
+          '      Expected number, was undefined\n' +
+          '    [2] is invalid:\n' +
+          '      Expected number, was undefined',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
@@ -637,7 +697,10 @@ describe('ValueObject', () => {
       new Sub({ id: 'xyz', seq: 4, city: 'London', owner: 'Aslak' })
       assertThrows(
         () => new Sub({ seq: 4, city: 'London', owner: 'Aslak' }),
-        'Sub({id:string, seq:number, city:string, owner:string}) called with {seq, city, owner} ("id" is missing)',
+        'Sub was constructed with invalid property values\n' +
+          '  Expected: { id:string, seq:number, city:string, owner:string }\n' +
+          '  Actual:   { seq:number, city:string, owner:string }\n' +
+          '  id is missing',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
@@ -764,8 +827,11 @@ describe('ValueObject', () => {
       class Foo extends ValueObject.define({ things: ['string'] }) {}
       assertThrows(
         () => new Foo({ things: 666 }),
-        'Foo({things:[string]}) called with invalid types {things:number} - ' +
-          '"things" is invalid (Expected array, was number)',
+        'Foo was constructed with invalid property values\n' +
+          '  Expected: { things:[string] }\n' +
+          '  Actual:   { things:number }\n' +
+          '  things is invalid:\n' +
+          '    Expected array, was number',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
@@ -1060,7 +1126,11 @@ describe('ValueObject', () => {
       class Hello extends ValueObject.define({ x: 'string' }) {}
       assertThrows(
         () => new Hello({ x: 'yo' }).with({ y: 'ok', z: 'good' }),
-        'Hello({x:string}) called with {x, y, z} ("y" is unexpected, "z" is unexpected)'
+        'Hello was constructed with invalid property values\n' +
+          '  Expected: { x:string }\n' +
+          '  Actual:   { x:string, y:string, z:string }\n' +
+          '  y is unexpected\n' +
+          '  z is unexpected'
       )
     })
 
@@ -1094,11 +1164,18 @@ describe('ValueObject', () => {
       const foo = new Foo({ a: 'ok', b: new X(), c: [1, 2, 3] })
       assertThrows(
         () => foo.with({ a, b, c }),
-        'Foo({a:string, b:X, c:[number]}) ' +
-          'called with invalid types {a:number, b:Date, c:Array} - ' +
-          '"a" is invalid (Expected string, was number), ' +
-          '"b" is invalid (Expected X, was Date), ' +
-          '"c" is invalid ([1] is invalid (Expected number, was undefined), [2] is invalid (Expected number, was undefined))',
+        'Foo was constructed with invalid property values\n' +
+          '  Expected: { a:string, b:X, c:[number] }\n' +
+          '  Actual:   { a:number, b:Date, c:Array }\n' +
+          '  a is invalid:\n' +
+          '    Expected string, was number\n' +
+          '  b is invalid:\n' +
+          '    Expected X, was Date\n' +
+          '  c is invalid:\n' +
+          '    [1] is invalid:\n' +
+          '      Expected number, was undefined\n' +
+          '    [2] is invalid:\n' +
+          '      Expected number, was undefined',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
