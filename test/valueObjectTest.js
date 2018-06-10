@@ -114,7 +114,7 @@ describe('ValueObject', () => {
         () => new Foo(),
         'Foo was constructed with invalid property values\n' +
           '  Expected: { b:string, a:[string] }\n' +
-          '  Actual:   { 0 arguments }',
+          '  Actual:   0 arguments',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
@@ -125,7 +125,7 @@ describe('ValueObject', () => {
         () => new Foo({ a: 'ok' }, null),
         'Foo was constructed with invalid property values\n' +
           '  Expected: { b:string, a:string }\n' +
-          '  Actual:   { 2 arguments }',
+          '  Actual:   2 arguments',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
@@ -151,7 +151,7 @@ describe('ValueObject', () => {
       assertThrows(
         () => new WantsNestedProps({ x: {} }),
         'WantsNestedProps was constructed with invalid property values\n' +
-          '  Expected: { x:{y:string} }\n' +
+          '  Expected: { x:{ y:string } }\n' +
           '  Actual:   { x:object }\n' +
           '  x is invalid:\n' +
           '    Struct was constructed with invalid property values\n' +
@@ -167,12 +167,12 @@ describe('ValueObject', () => {
       assertThrows(
         () => new WantsNestedProps({ x: 'zomg' }),
         'WantsNestedProps was constructed with invalid property values\n' +
-          '  Expected: { x:{y:string} }\n' +
+          '  Expected: { x:{ y:string } }\n' +
           '  Actual:   { x:string }\n' +
           '  x is invalid:\n' +
           '    Struct was constructed with invalid property values\n' +
           '      Expected: { y:string }\n' +
-          '      Actual:   { <string value> }\n' +
+          '      Actual:   string value: "zomg"\n' +
           '      expected object with property values',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )

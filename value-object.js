@@ -161,7 +161,7 @@ Schema.prototype.assignProperties = function(assignee, args) {
   if (args.length != 1) {
     return {
       ctor: assignee.constructor,
-      expected: this.describePropertyTypes(),
+      expected: this.describeSignature(),
       actual: args.length + ' arguments',
       failure: []
     }
@@ -170,7 +170,7 @@ Schema.prototype.assignProperties = function(assignee, args) {
   if (typeof arg !== 'object') {
     return {
       ctor: assignee.constructor,
-      expected: this.describePropertyTypes(),
+      expected: this.describeSignature(),
       actual: this.describePropertyValues(arg),
       failure: ['expected object with property values']
     }
@@ -179,7 +179,7 @@ Schema.prototype.assignProperties = function(assignee, args) {
   if (!this.validateAssignedPropertyNames(arg)) {
     return {
       ctor: assignee.constructor,
-      expected: this.describePropertyTypes(),
+      expected: this.describeSignature(),
       actual: this.describePropertyValues(arg),
       failure: describeDiffereceInKeys(this.propertyTypes, arg)
     }
@@ -199,7 +199,7 @@ Schema.prototype.assignProperties = function(assignee, args) {
   if (failures.length > 0) {
     return {
       ctor: assignee.constructor,
-      expected: this.describePropertyTypes(),
+      expected: this.describeSignature(),
       actual: this.describePropertyValues(arg),
       failure: failures
     }
@@ -228,17 +228,17 @@ Schema.prototype.areAllPropertyNamesAssigned = function(assignedProperties) {
   }
   return true
 }
-Schema.prototype.describePropertyTypes = function() {
+Schema.prototype.describeSignature = function() {
   var signature = []
   for (var propertyName in this.propertyTypes) {
     signature.push(propertyName + ':' + this.propertyTypes[propertyName].describe())
   }
-  return signature.join(', ')
+  return '{ ' + signature.join(', ') + ' }'
 }
 Schema.prototype.describePropertyValues = function(values) {
   var signature = []
   if (typeof values === 'string') {
-    return '<string value>'
+    return 'string value: "' + values + '"'
   }
   for (var propertyName in this.propertyTypes) {
     if (propertyName in values) {
@@ -250,7 +250,7 @@ Schema.prototype.describePropertyValues = function(values) {
       signature.push(valuePropertyName + ':' + inspectType(values[valuePropertyName]))
     }
   }
-  return signature.join(', ')
+  return '{ ' + signature.join(', ') + ' }'
 }
 Schema.prototype.coerce = function(value) {
   if (value === null) return { value: null }
@@ -304,7 +304,7 @@ Schema.prototype.toJSON = function(instance) {
   return json
 }
 Schema.prototype.describe = function() {
-  return '{' + this.describePropertyTypes() + '}'
+  return this.describeSignature()
 }
 
 function ArrayProp(elementType) {
@@ -666,13 +666,12 @@ function describeInvalidPropertyValues(invalidPropertyValues, indent) {
     functionName(invalidPropertyValues.ctor) +
     ' was constructed with invalid property values\n' +
     indent +
-    '  Expected: { ' +
+    '  Expected: ' +
     invalidPropertyValues.expected +
-    ' }\n' +
+    '\n' +
     indent +
-    '  Actual:   { ' +
-    invalidPropertyValues.actual +
-    ' }'
+    '  Actual:   ' +
+    invalidPropertyValues.actual
 
   return invalidPropertyValues.failure.length > 0
     ? typeExplanation +
