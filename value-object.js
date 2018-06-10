@@ -258,10 +258,7 @@ Schema.prototype.coerce = function(value) {
   try {
     return { value: new Constructor(value) }
   } catch (e) {
-    if (e.coercionFailures) {
-      return { failureMessage: e.coercionFailures }
-    }
-    return { failureMessage: e.message }
+    return { failureMessage: e.coercionFailures }
   }
 }
 Schema.prototype.areEqual = function(a, b) {

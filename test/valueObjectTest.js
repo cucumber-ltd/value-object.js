@@ -192,6 +192,19 @@ describe('ValueObject', () => {
       )
     })
 
+    it('fails when instantiated with constructor properties whose constructors throw', () => {
+      const constructorError = new Error('oh noes')
+      class Bad extends ValueObject.define({ x: 'string' }) {
+        constructor() {
+          throw constructorError
+        }
+      }
+      class HasBadProps extends ValueObject.define({ a: Bad, b: Bad }) {}
+      assertThrows(() => new HasBadProps({ a: {}, b: {} }), constructorError.message, error =>
+        assert.equal(error, constructorError)
+      )
+    })
+
     it('does not allow invalid dates', () => {
       class Foo extends ValueObject.define({ date: Date }) {}
       const date = new Date('2014-25-23') // Invalid date
