@@ -1,6 +1,6 @@
 {
   "name": "value-object",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "value-object.js - simple value objects",
   "main": "value-object.js",
   "scripts": {
@@ -8,17 +8,14 @@
     "eslint": "eslint src test",
     "mocha": "mocha",
     "karma": "karma start --browsers Firefox,Chrome --single-run",
-    "coverage": "node --harmony ./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha -- test"
+    "coverage":
+      "node --harmony ./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha -- test"
   },
   "repository": {
     "type": "git",
     "url": "git://github.com/cucumber-ltd/value-object.js.git"
   },
-  "keywords": [
-    "value",
-    "object",
-    "struct"
-  ],
+  "keywords": ["value", "object", "struct"],
   "author": "Cucumber Limited <cukes@googlegroups.com>",
   "license": "MIT",
   "bugs": {
@@ -47,7 +44,5 @@
     "prettier": "^1.12.1",
     "watchify": "^3.10.0"
   },
-  "files": [
-    "*"
-  ]
+  "files": ["*"]
 }
