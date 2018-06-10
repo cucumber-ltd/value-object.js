@@ -1,7 +1,7 @@
 function ValueObject() {
-  var invalidPropertyValues = this.constructor.schema.assignProperties(this, arguments)
-  if (invalidPropertyValues) {
-    throw new ValueObjectError(invalidPropertyValues)
+  var failedAssignment = this.constructor.schema.assignProperties(this, arguments)
+  if (failedAssignment) {
+    throw new ValueObjectError(failedAssignment)
   }
 }
 ValueObject.parseSchema = function(definition) {
@@ -73,7 +73,7 @@ ValueObject.prototype.with = function(newPropertyValues) {
         new Constructor(extend(this, newPropertyValues))
       }
       var coercionResult = property.coerce(newPropertyValues[newPropertyName])
-      if (coercionResult.failureMessage) {
+      if (coercionResult.failure) {
         new Constructor(extend(this, newPropertyValues))
       } else {
         instance[newPropertyName] = coercionResult.value
@@ -163,7 +163,7 @@ Schema.prototype.assignProperties = function(assignee, args) {
       ctor: assignee.constructor,
       expected: this.describePropertyTypes(),
       actual: args.length + ' arguments',
-      coercionFailures: []
+      failure: []
     }
   }
   var arg = args[0]
@@ -172,7 +172,7 @@ Schema.prototype.assignProperties = function(assignee, args) {
       ctor: assignee.constructor,
       expected: this.describePropertyTypes(),
       actual: this.describePropertyValues(arg),
-      coercionFailures: ['expected object with property values']
+      failure: ['expected object with property values']
     }
   }
   delete arg.__type__
@@ -181,16 +181,16 @@ Schema.prototype.assignProperties = function(assignee, args) {
       ctor: assignee.constructor,
       expected: this.describePropertyTypes(),
       actual: this.describePropertyValues(arg),
-      coercionFailures: describeDiffereceInKeys(this.propertyTypes, arg)
+      failure: describeDiffereceInKeys(this.propertyTypes, arg)
     }
   }
   var failures = []
   for (var propertyName in this.propertyTypes) {
     var coercionResult = this.propertyTypes[propertyName].coerce(arg[propertyName])
-    if (coercionResult.failureMessage) {
+    if (coercionResult.failure) {
       failures.push({
         propertyName: propertyName,
-        failureMessage: coercionResult.failureMessage
+        failure: coercionResult.failure
       })
     } else {
       assignee[propertyName] = coercionResult.value
@@ -201,7 +201,7 @@ Schema.prototype.assignProperties = function(assignee, args) {
       ctor: assignee.constructor,
       expected: this.describePropertyTypes(),
       actual: this.describePropertyValues(arg),
-      coercionFailures: failures
+      failure: failures
     }
   }
   if (typeof assignee._init === 'function') {
@@ -258,7 +258,7 @@ Schema.prototype.coerce = function(value) {
   try {
     return { value: new Constructor(value) }
   } catch (e) {
-    return { failureMessage: e.coercionFailures }
+    return { failure: e.failure }
   }
 }
 Schema.prototype.areEqual = function(a, b) {
@@ -313,25 +313,25 @@ function ArrayProp(elementType) {
 ArrayProp.prototype.coerce = function(value) {
   if (value === null) return { value: null }
   if (!Array.isArray(value)) {
-    return { failureMessage: 'Expected array, was ' + inspectType(value) }
+    return { failure: 'Expected array, was ' + inspectType(value) }
   }
   var elementType = this.elementType
-  var failureMessages = []
+  var failures = []
   var convertedValues = []
   for (var i = 0; i < value.length; i++) {
     var coercionResult = elementType.coerce(value[i])
-    if (coercionResult.failureMessage) {
-      failureMessages.push({
+    if (coercionResult.failure) {
+      failures.push({
         propertyName: '[' + i + ']',
-        failureMessage: coercionResult.failureMessage
+        failure: coercionResult.failure
       })
     } else {
       convertedValues.push(coercionResult.value)
     }
   }
-  if (failureMessages.length > 0) {
+  if (failures.length > 0) {
     return {
-      failureMessage: failureMessages
+      failure: failures
     }
   }
   return { value: convertedValues }
@@ -377,7 +377,7 @@ function UntypedArrayProp() {}
 UntypedArrayProp.prototype.coerce = function(value) {
   if (value === null) return { value: null }
   if (!Array.isArray(value)) {
-    return { failureMessage: 'Expected array, was ' + inspectType(value) }
+    return { failure: 'Expected array, was ' + inspectType(value) }
   }
   return { value: value }
 }
@@ -424,7 +424,7 @@ ConstructorProp.prototype.coerce = function(value) {
       return { value: new Constructor(value) }
     }
     return {
-      failureMessage: 'Expected ' + functionName(Constructor) + ', was ' + inspectType(value)
+      failure: 'Expected ' + functionName(Constructor) + ', was ' + inspectType(value)
     }
   }
   return { value: value }
@@ -457,10 +457,10 @@ DateProp.prototype.coerce = function(value) {
   } else if (typeof value === 'string' || typeof value === 'number') {
     date = new Date(value)
   } else {
-    return { failureMessage: 'Expected Date, string or number, was ' + inspectType(value) }
+    return { failure: 'Expected Date, string or number, was ' + inspectType(value) }
   }
   if (!isFinite(date)) {
-    return { failureMessage: 'Invalid Date' }
+    return { failure: 'Invalid Date' }
   }
   return { value: date }
 }
@@ -478,7 +478,7 @@ function Primitive(cast, name) {
 Primitive.prototype.coerce = function(value) {
   if (value === null) return { value: null }
   if (typeof value === this.name) return { value: value }
-  return { failureMessage: 'Expected ' + this.name + ', was ' + inspectType(value) }
+  return { failure: 'Expected ' + this.name + ', was ' + inspectType(value) }
 }
 Primitive.prototype.areEqual = function(a, b) {
   return this.cast(a) === this.cast(b)
@@ -633,7 +633,7 @@ function inspectType(o) {
 
 function ValueObjectError(message) {
   if (typeof message === 'object') {
-    this.coercionFailures = message
+    this.failure = message
     message = describeInvalidPropertyValues(message, '')
   }
   this.name = 'ValueObjectError'
@@ -657,7 +657,7 @@ function describeInvalidPropertyValues(invalidPropertyValues, indent) {
       indent +
       invalidPropertyValues.propertyName +
       ' is invalid:\n' +
-      describeInvalidPropertyValues(invalidPropertyValues.failureMessage, indent + '  ')
+      describeInvalidPropertyValues(invalidPropertyValues.failure, indent + '  ')
     )
   }
 
@@ -674,10 +674,10 @@ function describeInvalidPropertyValues(invalidPropertyValues, indent) {
     invalidPropertyValues.actual +
     ' }'
 
-  return invalidPropertyValues.coercionFailures.length > 0
+  return invalidPropertyValues.failure.length > 0
     ? typeExplanation +
         '\n' +
-        invalidPropertyValues.coercionFailures
+        invalidPropertyValues.failure
           .map(function(failure) {
             return describeInvalidPropertyValues(failure, indent + '  ')
           })
