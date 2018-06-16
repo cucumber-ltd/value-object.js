@@ -56,35 +56,7 @@ ValueObject.prototype.isEqualTo = function(other) {
 }
 ValueObject.prototype.with = function(newPropertyValues) {
   var Constructor = this.constructor
-  if (!Constructor.With) {
-    Constructor.With = function With() {}
-    Constructor.With.prototype = Object.create(Constructor.prototype)
-    Constructor.With.prototype.constructor = Constructor
-  }
-
-  var instance = new Constructor.With()
-  for (var propertyName in Constructor.schema.propertyTypes) {
-    instance[propertyName] = this[propertyName]
-  }
-  for (var newPropertyName in newPropertyValues) {
-    if (Object.prototype.hasOwnProperty.call(newPropertyValues, newPropertyName)) {
-      var property = Constructor.schema.propertyTypes[newPropertyName]
-      if (!property) {
-        new Constructor(extend(this, newPropertyValues))
-      }
-      var coercionResult = property.coerce(newPropertyValues[newPropertyName])
-      if (coercionResult.failure) {
-        new Constructor(extend(this, newPropertyValues))
-      } else {
-        instance[newPropertyName] = coercionResult.value
-      }
-    }
-  }
-  if (typeof instance._init === 'function') {
-    instance._init()
-  }
-  freeze(instance)
-  return instance
+  return new Constructor(extend(this.toPlainObject(), newPropertyValues))
 }
 ValueObject.prototype.toJSON = function() {
   return this.constructor.schema.toJSON(this)

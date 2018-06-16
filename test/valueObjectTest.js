@@ -1153,6 +1153,16 @@ describe('ValueObject', () => {
       assert.equal(yo.constructor, Yo)
     })
 
+    it('calls the original constructor', () => {
+      class X extends ValueObject.define({ a: 'string' }) {
+        constructor({ a }) {
+          super({ a: a + '!' })
+        }
+      }
+      const x = new X({ a: 'G' }).with({ a: 'H' })
+      assert.equal(x.a, 'H!')
+    })
+
     it('returns instances with schemas', () => {
       class Yo extends ValueObject.define({ x: 'string' }) {}
       const yo = new Yo({ x: '1' }).with({ x: '2' })
