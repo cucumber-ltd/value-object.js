@@ -581,19 +581,22 @@ function arrayIsMissing(array) {
 }
 
 function extend(extendee, extender) {
-  var extended = {},
-    prop
-  for (prop in extendee) {
-    if (Object.prototype.hasOwnProperty.call(extendee, prop)) {
-      extended[prop] = extendee[prop]
-    }
-  }
-  for (prop in extender) {
-    if (Object.prototype.hasOwnProperty.call(extender, prop)) {
-      extended[prop] = extender[prop]
-    }
-  }
+  var extended = {}
+  withOwnProperties(extendee, function(prop) {
+    extended[prop] = extendee[prop]
+  })
+  withOwnProperties(extender, function(prop) {
+    extended[prop] = extender[prop]
+  })
   return extended
+}
+
+function withOwnProperties(subject, fn) {
+  for (var prop in subject) {
+    if (Object.prototype.hasOwnProperty.call(subject, prop)) {
+      fn(prop)
+    }
+  }
 }
 
 function inspectType(o) {
