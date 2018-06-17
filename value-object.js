@@ -144,7 +144,7 @@ Schema.prototype.assignProperties = function(assignee, args) {
       ctor: assignee.constructor,
       expected: this.describeSignature(),
       actual: this.describePropertyValues(arg),
-      failure: ['expected object with property values']
+      failure: ['Expected object, was ' + this.describePropertyValues(arg)]
     }
   }
   delete arg.__type__
@@ -208,21 +208,25 @@ Schema.prototype.describeSignature = function() {
   return '{ ' + signature.join(', ') + ' }'
 }
 Schema.prototype.describePropertyValues = function(values) {
-  var signature = []
-  if (typeof values === 'string') {
-    return 'string value: "' + values + '"'
+  switch (typeof values) {
+    case 'string':
+      return 'string value: "' + values + '"'
+    case 'object':
+      var signature = []
+      for (var propertyName in this.propertyTypes) {
+        if (propertyName in values) {
+          signature.push(propertyName + ':' + inspectType(values[propertyName]))
+        }
+      }
+      for (var valuePropertyName in values) {
+        if (!(valuePropertyName in this.propertyTypes)) {
+          signature.push(valuePropertyName + ':' + inspectType(values[valuePropertyName]))
+        }
+      }
+      return '{ ' + signature.join(', ') + ' }'
+    default:
+      return typeof values
   }
-  for (var propertyName in this.propertyTypes) {
-    if (propertyName in values) {
-      signature.push(propertyName + ':' + inspectType(values[propertyName]))
-    }
-  }
-  for (var valuePropertyName in values) {
-    if (!(valuePropertyName in this.propertyTypes)) {
-      signature.push(valuePropertyName + ':' + inspectType(values[valuePropertyName]))
-    }
-  }
-  return '{ ' + signature.join(', ') + ' }'
 }
 Schema.prototype.coerce = function(value) {
   if (value === null) return { value: null }
@@ -230,7 +234,7 @@ Schema.prototype.coerce = function(value) {
   try {
     return { value: new Constructor(value) }
   } catch (e) {
-    return { failure: e.failure }
+    return e
   }
 }
 Schema.prototype.areEqual = function(a, b) {

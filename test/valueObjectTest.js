@@ -78,7 +78,7 @@ describe('ValueObject', () => {
       assert.strictEqual(foo.y, null)
     })
 
-    it('does not allow undefined property values', () => {
+    it('does not allow undefined property values for primitive properties', () => {
       class Foo extends ValueObject.define({ a: 'string', b: 'string' }) {}
 
       assertThrows(
@@ -88,6 +88,23 @@ describe('ValueObject', () => {
           '  Actual:   { a:string, b:undefined }\n' +
           '  b is invalid:\n' +
           '    Expected string, was undefined',
+        error => assert(error instanceof ValueObject.ValueObjectError)
+      )
+    })
+
+    it('does not allow undefined property values for nested struct properties', () => {
+      class Foo extends ValueObject.define({ a: { b: 'string' } }) {}
+
+      assertThrows(
+        () => new Foo({ a: undefined }),
+        'Foo was constructed with invalid property values\n' +
+          '  Expected: { a:{ b:string } }\n' +
+          '  Actual:   { a:undefined }\n' +
+          '  a is invalid:\n' +
+          '    Struct was constructed with invalid property values\n' +
+          '      Expected: { b:string }\n' +
+          '      Actual:   undefined\n' +
+          '      Expected object, was undefined',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
@@ -173,7 +190,7 @@ describe('ValueObject', () => {
           '    Struct was constructed with invalid property values\n' +
           '      Expected: { y:string }\n' +
           '      Actual:   string value: "zomg"\n' +
-          '      expected object with property values',
+          '      Expected object, was string value: "zomg"',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
