@@ -19,7 +19,7 @@ ValueObject.parseSchema = function(definition) {
       }
     }
     property.metadata = metadata
-    properties[propertyName] = property
+    properties[propertyName] = new Property(property, metadata)
   }
   return properties
 }
@@ -120,6 +120,30 @@ ValueObject.disableFreeze = function() {
 }
 ValueObject.enableFreeze = function() {
   freeze = enabledFreeze
+}
+
+function Property(type, metadata) {
+  this.type = type
+  this.metadata = metadata
+  if (type.toJSON) {
+    this.toJSON = function(args) {
+      return type.toJSON(args)
+    }
+  }
+  if (type.toPlainObject) {
+    this.toPlainObject = function(args) {
+      return type.toPlainObject(args)
+    }
+  }
+}
+Property.prototype.coerce = function(value) {
+  return this.type.coerce(value)
+}
+Property.prototype.areEqual = function(x, y) {
+  return this.type.areEqual(x, y)
+}
+Property.prototype.describe = function() {
+  return this.type.describe()
 }
 
 function Schema(propertyTypes) {

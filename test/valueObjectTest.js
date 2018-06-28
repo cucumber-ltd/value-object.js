@@ -14,12 +14,27 @@ describe('ValueObject', () => {
     })
 
     it('defines types with property metadata', () => {
-      const Currency = ValueObject.define({
-        code: { type: 'string', description: 'the country code', flavour: 'spicy' }
+      const Thing = ValueObject.define({
+        foo: {
+          type: 'string',
+          description: 'the foo',
+          flavour: 'spicy',
+          spicy: true,
+          yummy: false
+        },
+        bar: {
+          type: 'string',
+          description: 'the bar',
+          flavour: 'sweet'
+        }
       })
       assert.deepEqual(
-        { description: 'the country code', flavour: 'spicy' },
-        Currency.schema.propertyTypes.code.metadata
+        { description: 'the foo', flavour: 'spicy', spicy: true, yummy: false },
+        Thing.schema.propertyTypes.foo.metadata
+      )
+      assert.deepEqual(
+        { description: 'the bar', flavour: 'sweet' },
+        Thing.schema.propertyTypes.bar.metadata
       )
     })
 
