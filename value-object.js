@@ -7,8 +7,19 @@ function ValueObject() {
 ValueObject.parseSchema = function(definition) {
   var properties = {}
   for (var propertyName in definition) {
+    var metadata = {}
     var declared = definition[propertyName]
-    properties[propertyName] = ValueObject.findPropertyType(declared)
+    var property = ValueObject.findPropertyType(declared.type ? declared.type : declared)
+    if (declared.type) {
+      var declaredKeys = keys(declared)
+      for (var i = 0; i < declaredKeys.length; i++) {
+        if (declaredKeys[i] !== 'type') {
+          metadata[declaredKeys[i]] = declared[declaredKeys[i]]
+        }
+      }
+    }
+    property.metadata = metadata
+    properties[propertyName] = property
   }
   return properties
 }
