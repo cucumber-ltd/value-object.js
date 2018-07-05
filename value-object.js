@@ -56,7 +56,16 @@ ValueObject.prototype.isEqualTo = function(other) {
 }
 ValueObject.prototype.with = function(newPropertyValues) {
   var Constructor = this.constructor
-  return new Constructor(extend(this.toPlainObject(), newPropertyValues))
+  var finalPropertyValues = {}
+  var thisPropertyNames = Constructor.schema.propertyNames
+  for (var i = 0; i < thisPropertyNames.length; i++) {
+    finalPropertyValues[thisPropertyNames[i]] = this[thisPropertyNames[i]]
+  }
+  var newPropertyNames = ownKeys(newPropertyValues)
+  for (var j = 0; j < newPropertyNames.length; j++) {
+    finalPropertyValues[newPropertyNames[j]] = newPropertyValues[newPropertyNames[j]]
+  }
+  return new Constructor(finalPropertyValues)
 }
 ValueObject.prototype.toJSON = function() {
   return this.constructor.schema.toJSON(this)
@@ -557,6 +566,16 @@ function keys(o) {
   var k = []
   for (var key in o) {
     k.push(key)
+  }
+  return k
+}
+
+function ownKeys(o) {
+  var k = []
+  for (var key in o) {
+    if (Object.prototype.hasOwnProperty.call(o, key)) {
+      k.push(key)
+    }
   }
   return k
 }
