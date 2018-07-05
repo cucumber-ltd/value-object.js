@@ -13,6 +13,31 @@ describe('ValueObject', () => {
       assert.equal('GBP', gbp.code)
     })
 
+    it('defines types with property metadata', () => {
+      const Thing = ValueObject.define({
+        foo: {
+          type: 'string',
+          description: 'the foo',
+          flavour: 'spicy',
+          spicy: true,
+          yummy: false
+        },
+        bar: {
+          type: 'string',
+          description: 'the bar',
+          flavour: 'sweet'
+        }
+      })
+      assert.deepEqual(
+        { description: 'the foo', flavour: 'spicy', spicy: true, yummy: false },
+        Thing.schema.propertyTypes.foo.metadata
+      )
+      assert.deepEqual(
+        { description: 'the bar', flavour: 'sweet' },
+        Thing.schema.propertyTypes.bar.metadata
+      )
+    })
+
     it('defines types with nested anonymous types', () => {
       const Money = ValueObject.define({ amount: 'number', currency: { code: 'string' } })
       const allowance = new Money({ amount: 123, currency: { code: 'GBP' } })

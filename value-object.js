@@ -7,8 +7,19 @@ function ValueObject() {
 ValueObject.parseSchema = function(definition) {
   var properties = {}
   for (var propertyName in definition) {
+    var metadata = {}
     var declared = definition[propertyName]
-    properties[propertyName] = ValueObject.findPropertyType(declared)
+    var property = ValueObject.findPropertyType(declared.type ? declared.type : declared)
+    if (declared.type) {
+      var declaredKeys = keys(declared)
+      for (var i = 0; i < declaredKeys.length; i++) {
+        if (declaredKeys[i] !== 'type') {
+          metadata[declaredKeys[i]] = declared[declaredKeys[i]]
+        }
+      }
+    }
+    property.metadata = metadata
+    properties[propertyName] = new Property(property, metadata)
   }
   return properties
 }
@@ -118,6 +129,30 @@ ValueObject.disableFreeze = function() {
 }
 ValueObject.enableFreeze = function() {
   freeze = enabledFreeze
+}
+
+function Property(type, metadata) {
+  this.type = type
+  this.metadata = metadata
+  if (type.toJSON) {
+    this.toJSON = function(args) {
+      return type.toJSON(args)
+    }
+  }
+  if (type.toPlainObject) {
+    this.toPlainObject = function(args) {
+      return type.toPlainObject(args)
+    }
+  }
+}
+Property.prototype.coerce = function(value) {
+  return this.type.coerce(value)
+}
+Property.prototype.areEqual = function(x, y) {
+  return this.type.areEqual(x, y)
+}
+Property.prototype.describe = function() {
+  return this.type.describe()
 }
 
 function Schema(propertyTypes) {
