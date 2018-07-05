@@ -1219,6 +1219,22 @@ describe('ValueObject', () => {
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
+
+    it('does not use .toPlainObject()', () => {
+      class Money extends ValueObject.define({ amount: 'number', currency: 'string' }) {
+        toPlainObject() {
+          throw new Error('.with() should not use .toPlainObject()')
+        }
+      }
+
+      const money = new Money({ amount: 100, currency: 'ZAR' })
+      const newMoney = money.with({ amount: 200 })
+
+      assert.deepEqual(newMoney, {
+        amount: 200,
+        currency: 'ZAR'
+      })
+    })
   })
 
   describe('#validate()', () => {
