@@ -135,7 +135,7 @@ describe("A 'number?' property", () => {
   })
 })
 
-describe("a property declared as an optional array of 'string?' properties", () => {
+describe("A property declared as an optional array of 'string?' properties", () => {
   it("can declared with ValueObject.optional(['string?'])", () => {
     const Thing = ValueObject.define({
       requiredProp: 'string',
@@ -173,7 +173,7 @@ describe("a property declared as an optional array of 'string?' properties", () 
   })
 })
 
-describe('a property declared as an array of optionals', () => {
+describe("A property declared as a non-optional array of 'string?'", () => {
   it("can declared with ['string?']", () => {
     const Thing = ValueObject.define({
       requiredProp: 'string',
