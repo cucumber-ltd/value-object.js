@@ -43,7 +43,7 @@ ValueObject.propertyFactoryForDeclaration = function(declaration) {
     }
   } else if (declaration === Date) {
     return function() {
-      return new DateProp()
+      return new DateConstraint()
     }
   } else if (typeof declaration === 'object') {
     return function() {
@@ -51,7 +51,7 @@ ValueObject.propertyFactoryForDeclaration = function(declaration) {
     }
   } else if (typeof declaration === 'function') {
     return function() {
-      return new ConstructorProp(declaration)
+      return new ConstructorConstraint(declaration)
     }
   }
   var inspected = typeof declaration === 'string' ? '"' + declaration + '"' : declaration
@@ -453,10 +453,10 @@ UntypedArrayOf.prototype.toPlainObject = function(instance) {
       })
 }
 
-function ConstructorProp(ctor) {
+function ConstructorConstraint(ctor) {
   this.ctor = ctor
 }
-ConstructorProp.prototype.coerce = function(value) {
+ConstructorConstraint.prototype.coerce = function(value) {
   if (value === null) return { value: null }
   var Constructor = this.ctor
   if (!(value instanceof Constructor)) {
@@ -473,27 +473,27 @@ ConstructorProp.prototype.coerce = function(value) {
   }
   return { value: value }
 }
-ConstructorProp.prototype.areEqual = function(a, b) {
+ConstructorConstraint.prototype.areEqual = function(a, b) {
   return this.ctor.schema ? this.ctor.schema.areEqual(a, b) : a == b
 }
-ConstructorProp.prototype.describe = function() {
+ConstructorConstraint.prototype.describe = function() {
   return functionName(this.ctor)
 }
-ConstructorProp.prototype.toJSON = function(instance) {
+ConstructorConstraint.prototype.toJSON = function(instance) {
   if (instance === null) return null
   return typeof instance.toJSON === 'function'
     ? instance.toJSON()
     : JSON.parse(JSON.stringify(instance))
 }
-ConstructorProp.prototype.toPlainObject = function(instance) {
+ConstructorConstraint.prototype.toPlainObject = function(instance) {
   if (instance === null) return null
   return typeof instance.toPlainObject === 'function'
     ? instance.toPlainObject()
     : JSON.parse(JSON.stringify(instance))
 }
 
-function DateProp() {}
-DateProp.prototype.coerce = function(value) {
+function DateConstraint() {}
+DateConstraint.prototype.coerce = function(value) {
   if (value === null) return { value: null }
   var date
   if (value instanceof Date) {
@@ -508,10 +508,10 @@ DateProp.prototype.coerce = function(value) {
   }
   return { value: date }
 }
-DateProp.prototype.areEqual = function(a, b) {
+DateConstraint.prototype.areEqual = function(a, b) {
   return a.getTime() == b.getTime()
 }
-DateProp.prototype.describe = function() {
+DateConstraint.prototype.describe = function() {
   return 'Date'
 }
 
@@ -531,11 +531,11 @@ Primitive.prototype.describe = function() {
   return this.name
 }
 
-function ObjectProp() {
+function ObjectConstraint() {
   Primitive.call(this, Object, 'object')
 }
-ObjectProp.prototype = new Primitive(Object, 'object')
-ObjectProp.prototype.areEqual = function(a, b) {
+ObjectConstraint.prototype = new Primitive(Object, 'object')
+ObjectConstraint.prototype.areEqual = function(a, b) {
   return JSON.stringify(a) === JSON.stringify(b)
 }
 
@@ -561,7 +561,7 @@ ValueObject.propertyFactories = {
     return new Primitive(Boolean, 'boolean')
   },
   object: function() {
-    return new ObjectProp()
+    return new ObjectConstraint()
   },
   any: function() {
     return new AnyProp()
