@@ -30,11 +30,11 @@ describe('ValueObject', () => {
       })
       assert.deepEqual(
         { description: 'the foo', flavour: 'spicy', spicy: true, yummy: false },
-        Thing.schema.propertyTypes.foo.metadata
+        Thing.schema.properties.foo.metadata
       )
       assert.deepEqual(
         { description: 'the bar', flavour: 'sweet' },
-        Thing.schema.propertyTypes.bar.metadata
+        Thing.schema.properties.bar.metadata
       )
     })
 

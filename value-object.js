@@ -158,9 +158,9 @@ Property.prototype.describe = function() {
   return this.type.describe()
 }
 
-function Schema(propertyTypes) {
-  this.propertyTypes = propertyTypes
-  this.propertyNames = keys(propertyTypes)
+function Schema(properties) {
+  this.properties = properties
+  this.propertyNames = keys(properties)
   this.Constructor = this.createConstructor()
 }
 Schema.prototype.createConstructor = function() {
@@ -173,7 +173,7 @@ Schema.prototype.createConstructor = function() {
   return Struct
 }
 Schema.prototype.extend = function(properties) {
-  var newPropertyTypes = extend(this.propertyTypes, ValueObject.parseSchema(properties))
+  var newPropertyTypes = extend(this.properties, ValueObject.parseSchema(properties))
   return new Schema(newPropertyTypes)
 }
 Schema.prototype.assignProperties = function(assignee, args) {
@@ -196,8 +196,8 @@ Schema.prototype.assignProperties = function(assignee, args) {
   }
   delete arg.__type__
   var failures = this.findUnexpectedProperties(arg)
-  for (var propertyName in this.propertyTypes) {
-    var coercionResult = this.propertyTypes[propertyName].coerce(
+  for (var propertyName in this.properties) {
+    var coercionResult = this.properties[propertyName].coerce(
       arg[propertyName],
       propertyName in arg
     )
@@ -226,15 +226,15 @@ Schema.prototype.assignProperties = function(assignee, args) {
 Schema.prototype.findUnexpectedProperties = function(assignedProperties) {
   var unexpectedProperties = []
   for (var j in assignedProperties) {
-    if (Object.prototype.hasOwnProperty.call(assignedProperties, j) && !this.propertyTypes[j])
+    if (Object.prototype.hasOwnProperty.call(assignedProperties, j) && !this.properties[j])
       unexpectedProperties.push({ propertyName: j, failure: 'property is unexpected' })
   }
   return unexpectedProperties
 }
 Schema.prototype.describeSignature = function() {
   var signature = []
-  for (var propertyName in this.propertyTypes) {
-    signature.push(propertyName + ':' + this.propertyTypes[propertyName].describe())
+  for (var propertyName in this.properties) {
+    signature.push(propertyName + ':' + this.properties[propertyName].describe())
   }
   return '{ ' + signature.join(', ') + ' }'
 }
@@ -244,13 +244,13 @@ Schema.prototype.describePropertyValues = function(values) {
       return 'string value: "' + values + '"'
     case 'object':
       var signature = []
-      for (var propertyName in this.propertyTypes) {
+      for (var propertyName in this.properties) {
         if (propertyName in values) {
           signature.push(propertyName + ':' + inspectType(values[propertyName]))
         }
       }
       for (var valuePropertyName in values) {
-        if (!(valuePropertyName in this.propertyTypes)) {
+        if (!(valuePropertyName in this.properties)) {
           signature.push(valuePropertyName + ':' + inspectType(values[valuePropertyName]))
         }
       }
@@ -272,8 +272,8 @@ Schema.prototype.areEqual = function(a, b) {
   if (a === null || b === null) {
     return a === b
   }
-  for (var propertyName in this.propertyTypes) {
-    var property = this.propertyTypes[propertyName]
+  for (var propertyName in this.properties) {
+    var property = this.properties[propertyName]
     if (
       typeof a === 'undefined' ||
       typeof b === 'undefined' ||
@@ -287,8 +287,8 @@ Schema.prototype.areEqual = function(a, b) {
 Schema.prototype.toPlainObject = function(instance) {
   if (instance === null) return null
   var object = {}
-  for (var propertyName in this.propertyTypes) {
-    var property = this.propertyTypes[propertyName]
+  for (var propertyName in this.properties) {
+    var property = this.properties[propertyName]
     object[propertyName] =
       typeof property.toPlainObject === 'function'
         ? property.toPlainObject(instance[propertyName])
@@ -299,8 +299,8 @@ Schema.prototype.toPlainObject = function(instance) {
 Schema.prototype.toJSON = function(instance) {
   if (instance === null) return null
   var json = {}
-  for (var propertyName in this.propertyTypes) {
-    var property = this.propertyTypes[propertyName]
+  for (var propertyName in this.properties) {
+    var property = this.properties[propertyName]
     json[propertyName] =
       typeof property.toJSON === 'function'
         ? property.toJSON(instance[propertyName])
