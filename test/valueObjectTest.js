@@ -38,6 +38,27 @@ describe('ValueObject', () => {
       )
     })
 
+    it('defines types with typed arrays with property metadata', () => {
+      const Foo = ValueObject.define({ zzz: { type: 'string', blah: 'yeah' } })
+      const Thing = ValueObject.define({
+        foo: [Foo]
+      })
+      assert.deepEqual(
+        { blah: 'yeah' },
+        Thing.schema.properties.foo.typeConstraint.elementType.ctor.schema.properties.zzz.metadata
+      )
+    })
+
+    it('defines types with typed arrays with inline types with property metadata', () => {
+      const Thing = ValueObject.define({
+        foo: [{ zzz: { type: 'string', blah: 'yeah' } }]
+      })
+      assert.deepEqual(
+        { blah: 'yeah' },
+        Thing.schema.properties.foo.typeConstraint.elementType.ctor.schema.properties.zzz.metadata
+      )
+    })
+
     it('defines types with nested anonymous types', () => {
       const Money = ValueObject.define({ amount: 'number', currency: { code: 'string' } })
       const allowance = new Money({ amount: 123, currency: { code: 'GBP' } })
@@ -126,10 +147,7 @@ describe('ValueObject', () => {
           '  Expected: { a:{ b:string } }\n' +
           '  Actual:   { a:undefined }\n' +
           '  a is invalid:\n' +
-          '    Struct was constructed with invalid property values\n' +
-          '      Expected: { b:string }\n' +
-          '      Actual:   undefined\n' +
-          '      Expected object, was undefined',
+          '    Expected Struct, was undefined',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
@@ -215,10 +233,7 @@ describe('ValueObject', () => {
           '  Expected: { x:{ y:string } }\n' +
           '  Actual:   { x:string }\n' +
           '  x is invalid:\n' +
-          '    Struct was constructed with invalid property values\n' +
-          '      Expected: { y:string }\n' +
-          '      Actual:   string value: "zomg"\n' +
-          '      Expected object, was string value: "zomg"',
+          '    Expected Struct, was string',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })

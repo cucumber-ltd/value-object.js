@@ -21,7 +21,7 @@ ValueObject.parseSchema = function(definition) {
       declared.type ? declared.type : declared
     )
     var property = propertyFactory()
-    properties[propertyName] = new MustBeAssignedProperty(new Property(property, metadata))
+    properties[propertyName] = new Property(property, metadata)
   }
   return properties
 }
@@ -39,7 +39,7 @@ ValueObject.propertyFactoryForDeclaration = function(declaration) {
     }
   } else if (declaration === Array) {
     return function() {
-      return new UntypedArrayOf()
+      return new UntypedArrayConstraint()
     }
   } else if (declaration === Date) {
     return function() {
@@ -47,7 +47,14 @@ ValueObject.propertyFactoryForDeclaration = function(declaration) {
     }
   } else if (typeof declaration === 'object') {
     return function() {
-      return new Schema(ValueObject.parseSchema(declaration))
+      function Struct() {
+        ValueObject.apply(this, arguments)
+      }
+      Struct.prototype = Object.create(ValueObject.prototype)
+      Struct.schema = new Schema(ValueObject.parseSchema(declaration))
+      Struct.isAnonymous = true
+      Struct.prototype.constructor = Struct
+      return new ConstructorConstraint(Struct)
     }
   } else if (typeof declaration === 'function') {
     return function() {
@@ -144,55 +151,31 @@ ValueObject.enableFreeze = function() {
   freeze = enabledFreeze
 }
 
-function Property(type, metadata) {
-  this.type = type
+function Property(typeConstraint, metadata) {
+  this.typeConstraint = typeConstraint
   this.metadata = metadata
-  if (type.toJSON) {
+  if (typeConstraint.toJSON) {
     this.toJSON = function(args) {
-      return type.toJSON(args)
+      return typeConstraint.toJSON(args)
     }
   }
-  if (type.toPlainObject) {
+  if (typeConstraint.toPlainObject) {
     this.toPlainObject = function(args) {
-      return type.toPlainObject(args)
+      return typeConstraint.toPlainObject(args)
     }
   }
 }
-Property.prototype.coerce = function(value) {
-  return this.type.coerce(value)
-}
-Property.prototype.areEqual = function(x, y) {
-  return this.type.areEqual(x, y)
-}
-Property.prototype.describe = function() {
-  return this.type.describe()
-}
-
-function MustBeAssignedProperty(property) {
-  this.property = property
-  if (property.toJSON) {
-    this.toJSON = function(args) {
-      return property.toJSON(args)
-    }
-  }
-  if (property.toPlainObject) {
-    this.toPlainObject = function(args) {
-      return property.toPlainObject(args)
-    }
-  }
-  this.metadata = property.metadata
-}
-MustBeAssignedProperty.prototype.coerce = function(value, wasAssigned) {
+Property.prototype.coerce = function(value, wasAssigned) {
   if (!wasAssigned) {
     return { failure: 'property is missing' }
   }
-  return this.property.coerce(value, true)
+  return this.typeConstraint.coerce(value)
 }
-MustBeAssignedProperty.prototype.areEqual = function(x, y) {
-  return this.property.areEqual(x, y)
+Property.prototype.areEqual = function(x, y) {
+  return this.typeConstraint.areEqual(x, y)
 }
-MustBeAssignedProperty.prototype.describe = function() {
-  return this.property.describe()
+Property.prototype.describe = function() {
+  return this.typeConstraint.describe()
 }
 
 function Schema(properties) {
@@ -417,15 +400,15 @@ ArrayOf.prototype.toPlainObject = function(instance) {
   )
 }
 
-function UntypedArrayOf() {}
-UntypedArrayOf.prototype.coerce = function(value) {
+function UntypedArrayConstraint() {}
+UntypedArrayConstraint.prototype.coerce = function(value) {
   if (value === null) return { value: null }
   if (!Array.isArray(value)) {
     return { failure: 'Expected array, was ' + inspectType(value) }
   }
   return { value: value }
 }
-UntypedArrayOf.prototype.areEqual = function(a, b) {
+UntypedArrayConstraint.prototype.areEqual = function(a, b) {
   if (a === null && b === null) return true
   if (a.length != b.length) return false
   for (var i = 0; i < a.length; i++) {
@@ -435,17 +418,17 @@ UntypedArrayOf.prototype.areEqual = function(a, b) {
   }
   return true
 }
-UntypedArrayOf.prototype.describe = function() {
+UntypedArrayConstraint.prototype.describe = function() {
   return 'Array'
 }
-UntypedArrayOf.prototype.toJSON = function(instance) {
+UntypedArrayConstraint.prototype.toJSON = function(instance) {
   return instance === null
     ? null
     : instance.map(function(element, index) {
         return typeof element.toJSON === 'function' ? element.toJSON(index) : element
       })
 }
-UntypedArrayOf.prototype.toPlainObject = function(instance) {
+UntypedArrayConstraint.prototype.toPlainObject = function(instance) {
   return instance === null
     ? null
     : instance.map(function(element) {
@@ -458,25 +441,33 @@ function ConstructorConstraint(ctor) {
 }
 ConstructorConstraint.prototype.coerce = function(value) {
   if (value === null) return { value: null }
-  var Constructor = this.ctor
-  if (!(value instanceof Constructor)) {
-    if (typeof Constructor.fromJSON === 'function') {
-      var properties = Constructor.fromJSON(value)
-      return { value: new Constructor(properties) }
+  try {
+    var Constructor = this.ctor
+    if (!(value instanceof Constructor)) {
+      if (typeof Constructor.fromJSON === 'function') {
+        var properties = Constructor.fromJSON(value)
+        return { value: new Constructor(properties) }
+      }
+      if (value && value.constructor === Object) {
+        return { value: new Constructor(value) }
+      }
+      return {
+        failure: 'Expected ' + functionName(Constructor) + ', was ' + inspectType(value)
+      }
     }
-    if (value && value.constructor === Object) {
-      return { value: new Constructor(value) }
-    }
-    return {
-      failure: 'Expected ' + functionName(Constructor) + ', was ' + inspectType(value)
-    }
+    return { value: value }
+  } catch (e) {
+    if (e.failure) return e
+    throw e
   }
-  return { value: value }
 }
 ConstructorConstraint.prototype.areEqual = function(a, b) {
   return this.ctor.schema ? this.ctor.schema.areEqual(a, b) : a == b
 }
 ConstructorConstraint.prototype.describe = function() {
+  if (this.ctor.schema && this.ctor.isAnonymous) {
+    return this.ctor.schema.describe()
+  }
   return functionName(this.ctor)
 }
 ConstructorConstraint.prototype.toJSON = function(instance) {
