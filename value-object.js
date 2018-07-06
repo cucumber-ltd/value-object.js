@@ -8,24 +8,42 @@ ValueObject.parseSchema = function(definition) {
   var properties = {}
   for (var propertyName in definition) {
     var metadata = {}
-    var declared = definition[propertyName]
-    if (declared.type) {
-      var declaredKeys = keys(declared)
+    var declaration = definition[propertyName]
+    if (declaration.type) {
+      var declaredKeys = keys(declaration)
       for (var i = 0; i < declaredKeys.length; i++) {
         if (declaredKeys[i] !== 'type') {
-          metadata[declaredKeys[i]] = declared[declaredKeys[i]]
+          metadata[declaredKeys[i]] = declaration[declaredKeys[i]]
         }
       }
     }
-    var propertyFactory = ValueObject.propertyFactoryForDeclaration(
-      declared.type ? declared.type : declared
+    var parsedDeclaration = parseDeclaration(declaration)
+    var constraintFactory = ValueObject.constraintFactoryForDeclaration(
+      parsedDeclaration.declaredType
     )
-    var property = propertyFactory()
-    properties[propertyName] = new Property(property, metadata)
+    var constraint = constraintFactory()
+    properties[propertyName] = new Property(constraint, metadata, parsedDeclaration.optional)
   }
   return properties
 }
-ValueObject.propertyFactoryForDeclaration = function(declaration) {
+function parseDeclaration(declaration) {
+  var optional = false
+  if (declaration.declaration) {
+    optional = declaration.optional
+    declaration = declaration.declaration
+  }
+  var declaredType = declaration.type ? declaration.type : declaration
+  if (typeof declaredType === 'string' && declaredType.indexOf('?') === declaredType.length - 1) {
+    declaredType = declaredType.substring(0, declaredType.length - 1)
+    optional = true
+  }
+  return {
+    declaredType: declaredType,
+    optional: optional
+  }
+}
+
+ValueObject.constraintFactoryForDeclaration = function(declaration) {
   if (typeof declaration === 'string') {
     var factory = ValueObject.propertyFactories[declaration]
     if (factory) return factory
@@ -34,8 +52,16 @@ ValueObject.propertyFactoryForDeclaration = function(declaration) {
       throw new ValueObjectError('Expected array property definition with single type element')
     }
     return function() {
-      var elementTypeFactory = ValueObject.propertyFactoryForDeclaration(declaration[0])
-      return new ArrayOf(elementTypeFactory())
+      // 'string?'
+      var parsedDeclaration = parseDeclaration(declaration[0])
+      var elementTypeFactory = ValueObject.constraintFactoryForDeclaration(
+        parsedDeclaration.declaredType
+      )
+      var elementType = elementTypeFactory()
+      if (parsedDeclaration.optional) {
+        elementType = new OptionalConstraint(elementType)
+      }
+      return new ArrayOf(elementType)
     }
   } else if (declaration === Array) {
     return function() {
@@ -150,10 +176,17 @@ ValueObject.disableFreeze = function() {
 ValueObject.enableFreeze = function() {
   freeze = enabledFreeze
 }
+ValueObject.optional = function(declaration) {
+  return {
+    optional: true,
+    declaration: declaration
+  }
+}
 
-function Property(typeConstraint, metadata) {
+function Property(typeConstraint, metadata, optional) {
   this.typeConstraint = typeConstraint
   this.metadata = metadata
+  this.optional = !!optional
   if (typeConstraint.toJSON) {
     this.toJSON = function(args) {
       return typeConstraint.toJSON(args)
@@ -166,8 +199,11 @@ function Property(typeConstraint, metadata) {
   }
 }
 Property.prototype.coerce = function(value, wasAssigned) {
-  if (!wasAssigned) {
+  if (!wasAssigned && !this.optional) {
     return { failure: 'property is missing' }
+  }
+  if (this.optional && (value === undefined || value === null)) {
+    return { value: value }
   }
   return this.typeConstraint.coerce(value)
 }
@@ -217,16 +253,14 @@ Schema.prototype.assignProperties = function(assignee, args) {
   delete arg.__type__
   var failures = this.findUnexpectedProperties(arg)
   for (var propertyName in this.properties) {
-    var coercionResult = this.properties[propertyName].coerce(
-      arg[propertyName],
-      propertyName in arg
-    )
+    var wasAssigned = propertyName in arg
+    var coercionResult = this.properties[propertyName].coerce(arg[propertyName], wasAssigned)
     if (coercionResult.failure) {
       failures.push({
         propertyName: propertyName,
         failure: coercionResult.failure
       })
-    } else {
+    } else if (wasAssigned) {
       assignee[propertyName] = coercionResult.value
     }
   }
@@ -539,6 +573,20 @@ AnyProp.prototype.areEqual = function(a, b) {
 }
 AnyProp.prototype.describe = function() {
   return 'any'
+}
+
+function OptionalConstraint(innerConstraint) {
+  this.innerConstraint = innerConstraint
+}
+OptionalConstraint.prototype.coerce = function(value) {
+  if (typeof value === 'undefined') return { value: undefined }
+  return this.innerConstraint.coerce(value)
+}
+OptionalConstraint.prototype.areEqual = function(a, b) {
+  return this.innerConstraint.areEqual(a, b)
+}
+OptionalConstraint.prototype.describe = function() {
+  return this.innerConstraint.describe() + '?'
 }
 
 ValueObject.propertyFactories = {
