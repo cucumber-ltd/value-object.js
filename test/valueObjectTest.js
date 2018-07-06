@@ -821,7 +821,7 @@ describe('ValueObject', () => {
     })
 
     it('accepts new property type definitions', () => {
-      ValueObject.definePropertyType('money', {
+      ValueObject.definePropertyType('money', () => ({
         coerce(value) {
           const parts = value.split(' ')
           return { value: { amount: Number(parts[0]), currency: parts[1] } }
@@ -830,7 +830,7 @@ describe('ValueObject', () => {
         areEqual(a, b) {
           return a.currency == b.currency && a.amount == b.amount
         }
-      })
+      }))
       const Allowance = ValueObject.define({ cash: 'money' })
       const allowance = new Allowance({ cash: '123.00 GBP' })
       assert.equal(allowance.cash.amount, 123)

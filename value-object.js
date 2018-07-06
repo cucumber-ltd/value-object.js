@@ -9,7 +9,6 @@ ValueObject.parseSchema = function(definition) {
   for (var propertyName in definition) {
     var metadata = {}
     var declared = definition[propertyName]
-    var property = ValueObject.findPropertyType(declared.type ? declared.type : declared)
     if (declared.type) {
       var declaredKeys = keys(declared)
       for (var i = 0; i < declaredKeys.length; i++) {
@@ -18,30 +17,44 @@ ValueObject.parseSchema = function(definition) {
         }
       }
     }
-    property.metadata = metadata
-    properties[propertyName] = new Property(property, metadata)
+    var propertyFactory = ValueObject.propertyFactoryForDeclaration(
+      declared.type ? declared.type : declared
+    )
+    var property = propertyFactory()
+    properties[propertyName] = new MustBeAssignedProperty(new Property(property, metadata))
   }
   return properties
 }
-ValueObject.findPropertyType = function(declared) {
-  if (typeof declared === 'string') {
-    var prop = ValueObject.propertyTypes[declared]
-    if (prop) return prop
-  } else if (Array.isArray(declared)) {
-    if (declared.length != 1) {
+ValueObject.propertyFactoryForDeclaration = function(declaration) {
+  if (typeof declaration === 'string') {
+    var factory = ValueObject.propertyFactories[declaration]
+    if (factory) return factory
+  } else if (Array.isArray(declaration)) {
+    if (declaration.length != 1) {
       throw new ValueObjectError('Expected array property definition with single type element')
     }
-    return new ArrayProp(ValueObject.findPropertyType(declared[0]))
-  } else if (declared === Array) {
-    return new UntypedArrayProp()
-  } else if (declared === Date) {
-    return new DateProp()
-  } else if (typeof declared === 'object') {
-    return new Schema(ValueObject.parseSchema(declared))
-  } else if (typeof declared === 'function') {
-    return new ConstructorProp(declared)
+    return function() {
+      var elementTypeFactory = ValueObject.propertyFactoryForDeclaration(declaration[0])
+      return new ArrayOf(elementTypeFactory())
+    }
+  } else if (declaration === Array) {
+    return function() {
+      return new UntypedArrayOf()
+    }
+  } else if (declaration === Date) {
+    return function() {
+      return new DateProp()
+    }
+  } else if (typeof declaration === 'object') {
+    return function() {
+      return new Schema(ValueObject.parseSchema(declaration))
+    }
+  } else if (typeof declaration === 'function') {
+    return function() {
+      return new ConstructorProp(declaration)
+    }
   }
-  var inspected = typeof declared === 'string' ? '"' + declared + '"' : declared
+  var inspected = typeof declaration === 'string' ? '"' + declaration + '"' : declaration
   throw new ValueObjectError('Property defined as unsupported type (' + inspected + ')')
 }
 ValueObject.define = function(properties) {
@@ -60,7 +73,7 @@ ValueObject.define = function(properties) {
   })()
 }
 ValueObject.definePropertyType = function(name, definition) {
-  ValueObject.propertyTypes[name] = definition
+  ValueObject.propertyFactories[name] = definition
 }
 ValueObject.prototype.isEqualTo = function(other) {
   return this.constructor.schema.areEqual(this, other)
@@ -145,10 +158,7 @@ function Property(type, metadata) {
     }
   }
 }
-Property.prototype.coerce = function(value, wasAssigned) {
-  if (!wasAssigned) {
-    return { failure: 'property is missing' }
-  }
+Property.prototype.coerce = function(value) {
   return this.type.coerce(value)
 }
 Property.prototype.areEqual = function(x, y) {
@@ -156,6 +166,33 @@ Property.prototype.areEqual = function(x, y) {
 }
 Property.prototype.describe = function() {
   return this.type.describe()
+}
+
+function MustBeAssignedProperty(property) {
+  this.property = property
+  if (property.toJSON) {
+    this.toJSON = function(args) {
+      return property.toJSON(args)
+    }
+  }
+  if (property.toPlainObject) {
+    this.toPlainObject = function(args) {
+      return property.toPlainObject(args)
+    }
+  }
+  this.metadata = property.metadata
+}
+MustBeAssignedProperty.prototype.coerce = function(value, wasAssigned) {
+  if (!wasAssigned) {
+    return { failure: 'property is missing' }
+  }
+  return this.property.coerce(value, true)
+}
+MustBeAssignedProperty.prototype.areEqual = function(x, y) {
+  return this.property.areEqual(x, y)
+}
+MustBeAssignedProperty.prototype.describe = function() {
+  return this.property.describe()
 }
 
 function Schema(properties) {
@@ -314,10 +351,10 @@ Schema.prototype.describe = function() {
   return this.describeSignature()
 }
 
-function ArrayProp(elementType) {
+function ArrayOf(elementType) {
   this.elementType = elementType
 }
-ArrayProp.prototype.coerce = function(value) {
+ArrayOf.prototype.coerce = function(value) {
   if (value === null) return { value: null }
   if (!Array.isArray(value)) {
     return { failure: 'Expected array, was ' + inspectType(value) }
@@ -343,17 +380,17 @@ ArrayProp.prototype.coerce = function(value) {
   }
   return { value: convertedValues }
 }
-ArrayProp.prototype.areEqual = function(a, b) {
+ArrayOf.prototype.areEqual = function(a, b) {
   if (a.length != b.length) return false
   for (var i = 0; i < a.length; i++) {
     if (!this.elementType.areEqual(a[i], b[i])) return false
   }
   return true
 }
-ArrayProp.prototype.describe = function() {
+ArrayOf.prototype.describe = function() {
   return '[' + this.elementType.describe() + ']'
 }
-ArrayProp.prototype.toJSON = function(instance) {
+ArrayOf.prototype.toJSON = function(instance) {
   if (instance === null) return null
   var elementType = this.elementType
   return instance.map(
@@ -366,7 +403,7 @@ ArrayProp.prototype.toJSON = function(instance) {
         }
   )
 }
-ArrayProp.prototype.toPlainObject = function(instance) {
+ArrayOf.prototype.toPlainObject = function(instance) {
   if (instance === null) return null
   var elementType = this.elementType
   return instance.map(
@@ -380,15 +417,15 @@ ArrayProp.prototype.toPlainObject = function(instance) {
   )
 }
 
-function UntypedArrayProp() {}
-UntypedArrayProp.prototype.coerce = function(value) {
+function UntypedArrayOf() {}
+UntypedArrayOf.prototype.coerce = function(value) {
   if (value === null) return { value: null }
   if (!Array.isArray(value)) {
     return { failure: 'Expected array, was ' + inspectType(value) }
   }
   return { value: value }
 }
-UntypedArrayProp.prototype.areEqual = function(a, b) {
+UntypedArrayOf.prototype.areEqual = function(a, b) {
   if (a === null && b === null) return true
   if (a.length != b.length) return false
   for (var i = 0; i < a.length; i++) {
@@ -398,17 +435,17 @@ UntypedArrayProp.prototype.areEqual = function(a, b) {
   }
   return true
 }
-UntypedArrayProp.prototype.describe = function() {
+UntypedArrayOf.prototype.describe = function() {
   return 'Array'
 }
-UntypedArrayProp.prototype.toJSON = function(instance) {
+UntypedArrayOf.prototype.toJSON = function(instance) {
   return instance === null
     ? null
     : instance.map(function(element, index) {
         return typeof element.toJSON === 'function' ? element.toJSON(index) : element
       })
 }
-UntypedArrayProp.prototype.toPlainObject = function(instance) {
+UntypedArrayOf.prototype.toPlainObject = function(instance) {
   return instance === null
     ? null
     : instance.map(function(element) {
@@ -513,12 +550,22 @@ AnyProp.prototype.describe = function() {
   return 'any'
 }
 
-ValueObject.propertyTypes = {
-  string: new Primitive(String, 'string'),
-  number: new Primitive(Number, 'number'),
-  boolean: new Primitive(Boolean, 'boolean'),
-  object: new ObjectProp(),
-  any: new AnyProp()
+ValueObject.propertyFactories = {
+  string: function() {
+    return new Primitive(String, 'string')
+  },
+  number: function() {
+    return new Primitive(Number, 'number')
+  },
+  boolean: function() {
+    return new Primitive(Boolean, 'boolean')
+  },
+  object: function() {
+    return new ObjectProp()
+  },
+  any: function() {
+    return new AnyProp()
+  }
 }
 
 function ValidationFailures() {
