@@ -145,7 +145,10 @@ function Property(type, metadata) {
     }
   }
 }
-Property.prototype.coerce = function(value) {
+Property.prototype.coerce = function(value, wasAssigned) {
+  if (!wasAssigned) {
+    return { failure: 'property is missing' }
+  }
   return this.type.coerce(value)
 }
 Property.prototype.areEqual = function(x, y) {
@@ -192,17 +195,12 @@ Schema.prototype.assignProperties = function(assignee, args) {
     }
   }
   delete arg.__type__
-  if (!this.validateAssignedPropertyNames(arg)) {
-    return {
-      ctor: assignee.constructor,
-      expected: this.describeSignature(),
-      actual: this.describePropertyValues(arg),
-      failure: describeDiffereceInKeys(this.propertyTypes, arg)
-    }
-  }
-  var failures = []
+  var failures = this.findUnexpectedProperties(arg)
   for (var propertyName in this.propertyTypes) {
-    var coercionResult = this.propertyTypes[propertyName].coerce(arg[propertyName])
+    var coercionResult = this.propertyTypes[propertyName].coerce(
+      arg[propertyName],
+      propertyName in arg
+    )
     if (coercionResult.failure) {
       failures.push({
         propertyName: propertyName,
@@ -225,24 +223,13 @@ Schema.prototype.assignProperties = function(assignee, args) {
   }
   freeze(assignee)
 }
-Schema.prototype.validateAssignedPropertyNames = function(assignedProperties) {
-  return (
-    this.areAllPropertyNamesAssigned(assignedProperties) &&
-    this.areAllAssignedPropertyNamesValid(assignedProperties)
-  )
-}
-Schema.prototype.areAllAssignedPropertyNamesValid = function(assignedProperties) {
+Schema.prototype.findUnexpectedProperties = function(assignedProperties) {
+  var unexpectedProperties = []
   for (var j in assignedProperties) {
     if (Object.prototype.hasOwnProperty.call(assignedProperties, j) && !this.propertyTypes[j])
-      return false
+      unexpectedProperties.push({ propertyName: j, failure: 'property is unexpected' })
   }
-  return true
-}
-Schema.prototype.areAllPropertyNamesAssigned = function(assignedProperties) {
-  for (var i = 0; i < this.propertyNames.length; i++) {
-    if (!(this.propertyNames[i] in assignedProperties)) return false
-  }
-  return true
+  return unexpectedProperties
 }
 Schema.prototype.describeSignature = function() {
   var signature = []
@@ -613,29 +600,6 @@ function ownKeys(o) {
     }
   }
   return k
-}
-
-function describeDiffereceInKeys(expected, actual) {
-  var expectedKeys = keys(expected).sort()
-  var actualKeys = keys(actual).sort()
-  var missingKeys = expectedKeys.filter(arrayIsMissing(actualKeys))
-  var extraKeys = actualKeys.filter(arrayIsMissing(expectedKeys))
-  return missingKeys
-    .map(function(k) {
-      return k + ' is missing'
-    })
-    .concat(
-      extraKeys.map(function(k) {
-        return k + ' is unexpected'
-      })
-    )
-}
-
-function arrayIsMissing(array) {
-  return function(item) {
-    for (var i = 0; i < array.length; i++) if (array[i] == item) return false
-    return true
-  }
 }
 
 function extend(extendee, extender) {

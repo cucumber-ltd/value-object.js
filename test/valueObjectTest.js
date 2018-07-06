@@ -182,8 +182,10 @@ describe('ValueObject', () => {
         'WantsThreeProps was constructed with invalid property values\n' +
           '  Expected: { c:string, a:string, b:string }\n' +
           '  Actual:   { a:string, b:string, d:string }\n' +
-          '  c is missing\n' +
-          '  d is unexpected',
+          '  d is invalid:\n' +
+          '    property is unexpected\n' +
+          '  c is invalid:\n' +
+          '    property is missing',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
@@ -199,7 +201,8 @@ describe('ValueObject', () => {
           '    Struct was constructed with invalid property values\n' +
           '      Expected: { y:string }\n' +
           '      Actual:   {  }\n' +
-          '      y is missing',
+          '      y is invalid:\n' +
+          '        property is missing',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
@@ -228,8 +231,10 @@ describe('ValueObject', () => {
         'WantsOneProp was constructed with invalid property values\n' +
           '  Expected: { a:string }\n' +
           '  Actual:   { a:string, b:string, c:string }\n' +
-          '  b is unexpected\n' +
-          '  c is unexpected',
+          '  b is invalid:\n' +
+          '    property is unexpected\n' +
+          '  c is invalid:\n' +
+          '    property is unexpected',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
@@ -755,7 +760,8 @@ describe('ValueObject', () => {
         'Sub was constructed with invalid property values\n' +
           '  Expected: { id:string, seq:number, city:string, owner:string }\n' +
           '  Actual:   { seq:number, city:string, owner:string }\n' +
-          '  id is missing',
+          '  id is invalid:\n' +
+          '    property is missing',
         error => assert(error instanceof ValueObject.ValueObjectError)
       )
     })
@@ -1184,8 +1190,10 @@ describe('ValueObject', () => {
         'Hello was constructed with invalid property values\n' +
           '  Expected: { x:string }\n' +
           '  Actual:   { x:string, y:string, z:string }\n' +
-          '  y is unexpected\n' +
-          '  z is unexpected'
+          '  y is invalid:\n' +
+          '    property is unexpected\n' +
+          '  z is invalid:\n' +
+          '    property is unexpected'
       )
     })
 
