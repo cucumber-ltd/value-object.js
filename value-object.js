@@ -215,16 +215,6 @@ Property.prototype.describe = function() {
 function Schema(properties) {
   this.properties = properties
   this.propertyNames = keys(properties)
-  this.Constructor = this.createConstructor()
-}
-Schema.prototype.createConstructor = function() {
-  function Struct() {
-    ValueObject.apply(this, arguments)
-  }
-  Struct.prototype = Object.create(ValueObject.prototype)
-  Struct.schema = this
-  Struct.prototype.constructor = Struct
-  return Struct
 }
 Schema.prototype.extend = function(properties) {
   var newPropertyTypes = extend(this.properties, ValueObject.parseSchema(properties))
@@ -240,14 +230,6 @@ Schema.prototype.assignProperties = function(assignee, args) {
     }
   }
   var arg = args[0]
-  if (typeof arg !== 'object') {
-    return {
-      ctor: assignee.constructor,
-      expected: this.describeSignature(),
-      actual: this.describePropertyValues(arg),
-      failure: ['Expected object, was ' + this.describePropertyValues(arg)]
-    }
-  }
   delete arg.__type__
   var failures = this.findUnexpectedProperties(arg)
   for (var propertyName in this.properties) {
@@ -291,25 +273,18 @@ Schema.prototype.describeSignature = function() {
   return '{ ' + signature.join(', ') + ' }'
 }
 Schema.prototype.describePropertyValues = function(values) {
-  switch (typeof values) {
-    case 'string':
-      return 'string value: "' + values + '"'
-    case 'object':
-      var signature = []
-      for (var propertyName in this.properties) {
-        if (propertyName in values) {
-          signature.push(propertyName + ':' + inspectType(values[propertyName]))
-        }
-      }
-      for (var valuePropertyName in values) {
-        if (!(valuePropertyName in this.properties)) {
-          signature.push(valuePropertyName + ':' + inspectType(values[valuePropertyName]))
-        }
-      }
-      return '{ ' + signature.join(', ') + ' }'
-    default:
-      return typeof values
+  var signature = []
+  for (var propertyName in this.properties) {
+    if (propertyName in values) {
+      signature.push(propertyName + ':' + inspectType(values[propertyName]))
+    }
   }
+  for (var valuePropertyName in values) {
+    if (!(valuePropertyName in this.properties)) {
+      signature.push(valuePropertyName + ':' + inspectType(values[valuePropertyName]))
+    }
+  }
+  return '{ ' + signature.join(', ') + ' }'
 }
 Schema.prototype.areEqual = function(a, b) {
   if (a === null || b === null) {
@@ -328,7 +303,6 @@ Schema.prototype.areEqual = function(a, b) {
   return a.constructor === b.constructor
 }
 Schema.prototype.toPlainObject = function(instance) {
-  if (instance === null) return null
   var object = {}
   for (var propertyName in this.properties) {
     var property = this.properties[propertyName]
@@ -340,7 +314,6 @@ Schema.prototype.toPlainObject = function(instance) {
   return object
 }
 Schema.prototype.toJSON = function(instance) {
-  if (instance === null) return null
   var json = {}
   for (var propertyName in this.properties) {
     var property = this.properties[propertyName]
@@ -458,6 +431,7 @@ UntypedArrayConstraint.prototype.toPlainObject = function(instance) {
 
 function ConstructorConstraint(ctor) {
   this.ctor = ctor
+  if (this.ctor.schema) this.schema = this.ctor.schema
 }
 ConstructorConstraint.prototype.coerce = function(value) {
   if (value === null) return { value: null }
@@ -482,11 +456,11 @@ ConstructorConstraint.prototype.coerce = function(value) {
   }
 }
 ConstructorConstraint.prototype.areEqual = function(a, b) {
-  return this.ctor.schema ? this.ctor.schema.areEqual(a, b) : a == b
+  return this.schema ? this.schema.areEqual(a, b) : a == b
 }
 ConstructorConstraint.prototype.describe = function() {
-  if (this.ctor.schema && this.ctor.isAnonymous) {
-    return this.ctor.schema.describeSignature()
+  if (this.schema && this.ctor.isAnonymous) {
+    return this.schema.describeSignature()
   }
   return functionName(this.ctor)
 }

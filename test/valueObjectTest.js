@@ -76,7 +76,7 @@ describe('ValueObject', () => {
       })
       assert.deepEqual(
         { blah: 'yeah' },
-        Thing.schema.properties.foo.constraint.elementConstraint.ctor.schema.properties.zzz.metadata
+        Thing.schema.properties.foo.constraint.elementConstraint.schema.properties.zzz.metadata
       )
     })
 
@@ -86,7 +86,7 @@ describe('ValueObject', () => {
       })
       assert.deepEqual(
         { blah: 'yeah' },
-        Thing.schema.properties.foo.constraint.elementConstraint.ctor.schema.properties.zzz.metadata
+        Thing.schema.properties.foo.constraint.elementConstraint.schema.properties.zzz.metadata
       )
     })
 
