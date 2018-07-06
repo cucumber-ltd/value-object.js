@@ -18,9 +18,7 @@ ValueObject.parseSchema = function(definition) {
       }
     }
     var parsedDeclaration = this.parseDeclaration(declaration)
-    var constraintFactory = ValueObject.constraintFactoryForDeclaration(
-      parsedDeclaration.declaredType
-    )
+    var constraintFactory = ValueObject.constraintFactoryForDeclaration(parsedDeclaration)
     var constraint = constraintFactory()
     properties[propertyName] = new Property(constraint, metadata, parsedDeclaration.optional)
   }
@@ -42,50 +40,59 @@ ValueObject.parseDeclaration = function(declaration) {
     optional: optional
   }
 }
-ValueObject.constraintFactoryForDeclaration = function(declaration) {
-  if (typeof declaration === 'string') {
-    var factory = ValueObject.propertyFactories[declaration]
-    if (factory) return factory
-  } else if (Array.isArray(declaration)) {
-    if (declaration.length != 1) {
+ValueObject.constraintFactoryForDeclaration = function(parsedDeclaration) {
+  if (parsedDeclaration.optional) {
+    var parsedDeclaredType = ValueObject.parseDeclaration(parsedDeclaration.declaredType)
+    return function() {
+      return new OptionalConstraint(
+        ValueObject.constraintFactoryForDeclaration(parsedDeclaredType)()
+      )
+    }
+  }
+
+  var declaredType = parsedDeclaration.declaredType
+
+  if (Array.isArray(declaredType)) {
+    if (declaredType.length != 1) {
       throw new ValueObjectError('Expected array property definition with single type element')
     }
     return function() {
-      var parsedDeclaration = ValueObject.parseDeclaration(declaration[0])
+      var parsedElementDeclaration = ValueObject.parseDeclaration(declaredType[0])
       var elementConstraintFactory = ValueObject.constraintFactoryForDeclaration(
-        parsedDeclaration.declaredType
+        parsedElementDeclaration
       )
       var elementConstraint = elementConstraintFactory()
-      if (parsedDeclaration.optional) {
-        elementConstraint = new OptionalConstraint(elementConstraint)
-      }
       return new ArrayOfConstraint(elementConstraint)
     }
-  } else if (declaration === Array) {
+  }
+  if (typeof declaredType === 'string') {
+    var factory = ValueObject.propertyFactories[declaredType]
+    if (factory) return factory
+  } else if (declaredType === Array) {
     return function() {
       return new UntypedArrayConstraint()
     }
-  } else if (declaration === Date) {
+  } else if (declaredType === Date) {
     return function() {
       return new DateConstraint()
     }
-  } else if (typeof declaration === 'object') {
+  } else if (typeof declaredType === 'object') {
     return function() {
       function Struct() {
         ValueObject.apply(this, arguments)
       }
       Struct.prototype = Object.create(ValueObject.prototype)
-      Struct.schema = new Schema(ValueObject.parseSchema(declaration))
+      Struct.schema = new Schema(ValueObject.parseSchema(declaredType))
       Struct.isAnonymous = true
       Struct.prototype.constructor = Struct
       return new ConstructorConstraint(Struct)
     }
-  } else if (typeof declaration === 'function') {
+  } else if (typeof declaredType === 'function') {
     return function() {
-      return new ConstructorConstraint(declaration)
+      return new ConstructorConstraint(declaredType)
     }
   }
-  var inspected = typeof declaration === 'string' ? '"' + declaration + '"' : declaration
+  var inspected = typeof declaredType === 'string' ? '"' + declaredType + '"' : declaredType
   throw new ValueObjectError('Property defined as unsupported type (' + inspected + ')')
 }
 ValueObject.define = function(properties) {
@@ -535,18 +542,19 @@ AnyConstraint.prototype.describe = function() {
   return 'any'
 }
 
-function OptionalConstraint(innerConstraint) {
-  this.innerConstraint = innerConstraint
+function OptionalConstraint(constraint) {
+  this.constraint = constraint
+  this.optional = true
 }
 OptionalConstraint.prototype.coerce = function(value) {
   if (typeof value === 'undefined') return { value: undefined }
-  return this.innerConstraint.coerce(value)
+  return this.constraint.coerce(value)
 }
 OptionalConstraint.prototype.areEqual = function(a, b) {
-  return this.innerConstraint.areEqual(a, b)
+  return this.constraint.areEqual(a, b)
 }
 OptionalConstraint.prototype.describe = function() {
-  return this.innerConstraint.describe() + '?'
+  return this.constraint.describe() + '?'
 }
 
 ValueObject.propertyFactories = {

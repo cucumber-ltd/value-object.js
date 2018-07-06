@@ -13,37 +13,6 @@ describe('ValueObject', () => {
       assert.equal('GBP', gbp.code)
     })
 
-    it('defines types with optional properties', () => {
-      const Thing = ValueObject.define({
-        foo: 'string',
-        bar: 'string?',
-        baz: 'number?',
-        fuga: 'object?',
-        afoo: ValueObject.optional(['string?']),
-        bfoo: ValueObject.optional(['string']),
-        cfoo: ['string?']
-      })
-      const thing = new Thing({
-        foo: 'stuff',
-        baz: null,
-        fuga: undefined,
-        afoo: null,
-        bfoo: undefined,
-        cfoo: [undefined, 'wow', null, undefined]
-      })
-
-      assert.deepEqual(thing, {
-        foo: 'stuff',
-        baz: null,
-        fuga: undefined,
-        afoo: null,
-        bfoo: undefined,
-        cfoo: [undefined, 'wow', null, undefined]
-      })
-      assert.strictEqual(Thing.schema.properties.foo.optional, false)
-      assert.strictEqual(Thing.schema.properties.bar.optional, true)
-    })
-
     it('defines types with property metadata', () => {
       const Thing = ValueObject.define({
         foo: {
