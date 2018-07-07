@@ -49,46 +49,85 @@ const other = new Money({ currency: { code: 'USD', name: 'US Dollars' }, amount:
 ```
 
 Constraints prevent value objects from being instantiated with invalid property
-values:
+values.
+
+### Unexpected types
+
+Property values with unexpected types are rejected:
 
 ```js
-new Currency({ code: 'USD', name: 123 })
-// => Error: Currency was constructed with invalid property values
-//      Expected: { code:string, name:string }
-//      Actual:   { code:string, name:number }
-//        name is invalid:
-//          Expected string, was number
-
-new Currency({ code: 'NZD', name: 'New Zealand Dollars', colour: 'All black' })
-// => Error: Currency was constructed with invalid property values
-//      Expected: { code:string, name:string }
-//      Actual:   { code:string, name:string, colour:string }
-//        colour is invalid:
-//          Property is unexpected
-
-new Money({ amount: 123 })
-// => Error: Money was constructed with invalid property values
-//      Expected: { currency:Currency, amount:number }
-//      Actual:   { amount:number }
-//        currency is invalid:
-//          Property is missing
+> new Currency({ code: 'USD', name: 123 })
 ```
 
-Properties can be set to `null`, but not set to `undefined`:
+```
+Error: Currency was constructed with invalid property values
+  Expected: { code:string, name:string }
+  Actual:   { code:string, name:number }
+    name is invalid:
+      Expected string, was number
+```
+
+### Unrecognised properties
+
+Value objects cannot be instantiated with unrecognised properties:
 
 ```js
-new Money({ currency: null, amount: null })
-// => Money { currency: null, amount: null }
-
-new Money({ currency: null, amount: undefined })
-// => Error: Money was constructed with invalid property values
-//      Expected: { currency:Currency, amount:number }
-//      Actual:   { currency:null, amount:undefined }
-//        amount is invalid:
-//          Expected number, was undefined
+> new Currency({ code: 'NZD', name: 'New Zealand Dollars', colour: 'All black' })
 ```
 
-## Property types
+```
+Error: Currency was constructed with invalid property values
+  Expected: { code:string, name:string }
+  Actual:   { code:string, name:string, colour:string }
+    colour is invalid:
+      Property is unexpected
+```
+
+### Missing properties
+
+Value objects cannot be instantiated with missing properties (unless they are [optional](#optional-properties)):
+
+```js
+> new Money({ amount: 123 })
+```
+
+```
+Error: Money was constructed with invalid property values
+  Expected: { currency:Currency, amount:number }
+  Actual:   { amount:number }
+    currency is invalid:
+      Property is missing
+```
+
+### Setting properties to `null`
+
+Properties can be set to `null`:
+
+```js
+> new Money({ currency: null, amount: null })
+```
+
+```
+Money { currency: null, amount: null }
+```
+
+### Setting properties to `undefined`
+
+Properties **cannot** be set to `undefined` (unless they are [optional](#optional-properties)):
+
+```js
+> new Money({ currency: null, amount: undefined })
+```
+
+```
+Error: Money was constructed with invalid property values
+  Expected: { currency:Currency, amount:number }
+  Actual:   { currency:null, amount:undefined }
+    amount is invalid:
+      Expected number, was undefined
+```
+
+## Built-in property types
 
 Properties can be declared with built-in type constraints:
 
@@ -167,6 +206,9 @@ class Polygon extends ValueObject.define({
 
 ## User-defined properties
 
+Custom property types can be defined with `ValueObject.definePropertyType()` and
+then used later by name in `ValueObject.define()`:
+
 ```js
 ValueObject.definePropertyType('money', () => ({
   coerce(value) {
@@ -186,16 +228,37 @@ ValueObject.definePropertyType('money', () => ({
   }
 }))
 class Allowance extends ValueObject.define({ cash: 'money' }) {}
+```
 
-new Allowance({ cash: '123.00 GBP' })
-// => Allowance { cash: { amount: 123, currency: 'GBP' } }
+Property constraints are expressed as a function that returns a value with
+the following methods:
 
-new Allowance({ cash: 666 })
-// => Error: Allowance was constructed with invalid property values
-//      Expected: { cash:<money> }
-//      Actual:   { cash:number }
-//      cash is invalid:
-//        Only string values allowed
+* `.coerce(value)` converts an arbitrary value to the final property value.
+  Expected to return `{ value }` when converting the property value is successful or `{ failure }` with a message when converting fails.
+* `.areEqual(a, b)` returns `true` if two instances of the type are considered equal, or `false` otherwise.
+* `.describe()` returns a string used in error messages mentioning the property.
+
+The custom property type can then constrain properties values according to its
+`.coerce(value)` method:
+
+```js
+> new Allowance({ cash: '123.00 GBP' })
+```
+
+```
+Allowance { cash: { amount: 123, currency: 'GBP' } }
+```
+
+```js
+> new Allowance({ cash: 666 })
+```
+
+```
+Error: Allowance was constructed with invalid property values
+   Expected: { cash:<money> }
+   Actual:   { cash:number }
+   cash is invalid:
+     Only string values allowed
 ```
 
 ## Equality
@@ -234,11 +297,14 @@ class Product extends ValueObject.define({
   }
 }) {}
 
-Product.schema.properties.stockLevel
-// => Property {
-//      constraint: Primitive { cast: [Function: Number], name: 'number' },
-//      metadata: { default: 0, description: 'units in stock' },
-//      optional: false }
+> Product.schema.properties.stockLevel
+```
+
+```
+Property {
+  constraint: Primitive { cast: [Function: Number], name: 'number' },
+  metadata: { default: 0, description: 'units in stock' },
+  optional: false }
 ```
 
 ## Creating new value objects from existing value objects
@@ -258,8 +324,11 @@ Use `toPlainObject()` to create a plain old mutable object from a value object's
 property values:
 
 ```js
-JSON.stringify(gbp.toPlainObject())
-// => '{"code":"GBP","name":"British Pounds"}'
+> JSON.stringify(gbp.toPlainObject())
+```
+
+```json
+{ "code": "GBP", "name": "British Pounds" }
 ```
 
 ## Converting value objects to JSON
@@ -268,8 +337,11 @@ Use `toJSON()` to create an object with `__type__` properties for subsequent
 deserialization:
 
 ```js
-JSON.stringify(gbp.toJSON())
-// => '{"__type__":"Currency","code":"GBP","name":"British Pounds"}'
+> JSON.stringify(gbp.toJSON())
+```
+
+```json
+{ "__type__": "Currency", "code": "GBP", "name": "British Pounds" }
 ```
 
 ## Converting value objects from JSON
