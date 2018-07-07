@@ -186,6 +186,8 @@ Arrays with arbitrary elements can be declared with the type `Array`:
 class Person extends ValueObject.define({
   favouriteThings: Array
 }) {}
+
+new Person({ favouriteThings: ['cheese', 69, null] })
 ```
 
 ## Generic array properties
@@ -202,6 +204,13 @@ class Point extends ValueObject.define({
 class Polygon extends ValueObject.define({
   vertices: [Point] // instances of Point
 }) {}
+
+new Polygon({
+  vertices: [
+    new Point({ x: 1, y: 2 },
+    new Point({ x: 3, y: 4 }
+  )]
+})
 ```
 
 ## User-defined properties
@@ -238,7 +247,7 @@ the following methods:
 * `.areEqual(a, b)` returns `true` if two instances of the type are considered equal, or `false` otherwise.
 * `.describe()` returns a string used in error messages mentioning the property.
 
-The custom property type can then constrain properties values according to its
+The constraint is used to convert property values from other types according to its
 `.coerce(value)` method:
 
 ```js
@@ -248,6 +257,8 @@ The custom property type can then constrain properties values according to its
 ```
 Allowance { cash: { amount: 123, currency: 'GBP' } }
 ```
+
+...and its `.describe()` method is used in error messages:
 
 ```js
 > new Allowance({ cash: 666 })
