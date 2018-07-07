@@ -205,7 +205,7 @@ function Property(constraint, metadata, optional) {
 }
 Property.prototype.coerce = function(value, wasAssigned) {
   if (!wasAssigned && !this.optional) {
-    return { failure: 'property is missing' }
+    return { failure: 'Property is missing' }
   }
   if (this.optional && (value === undefined || value === null)) {
     return { value: value }
@@ -268,7 +268,7 @@ Schema.prototype.findUnexpectedProperties = function(assignedProperties) {
   var unexpectedProperties = []
   for (var j in assignedProperties) {
     if (Object.prototype.hasOwnProperty.call(assignedProperties, j) && !this.properties[j])
-      unexpectedProperties.push({ propertyName: j, failure: 'property is unexpected' })
+      unexpectedProperties.push({ propertyName: j, failure: 'Property is unexpected' })
   }
   return unexpectedProperties
 }

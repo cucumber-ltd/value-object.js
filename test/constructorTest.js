@@ -119,9 +119,9 @@ describe('ValueObject#constructor(properties)', () => {
         '  Expected: { c:string, a:string, b:string }\n' +
         '  Actual:   { a:string, b:string, d:string }\n' +
         '  d is invalid:\n' +
-        '    property is unexpected\n' +
+        '    Property is unexpected\n' +
         '  c is invalid:\n' +
-        '    property is missing',
+        '    Property is missing',
       error => assert(error instanceof ValueObject.ValueObjectError)
     )
   })
@@ -138,7 +138,7 @@ describe('ValueObject#constructor(properties)', () => {
         '      Expected: { y:string }\n' +
         '      Actual:   {  }\n' +
         '      y is invalid:\n' +
-        '        property is missing',
+        '        Property is missing',
       error => assert(error instanceof ValueObject.ValueObjectError)
     )
   })
@@ -165,9 +165,9 @@ describe('ValueObject#constructor(properties)', () => {
         '  Expected: { a:string }\n' +
         '  Actual:   { a:string, b:string, c:string }\n' +
         '  b is invalid:\n' +
-        '    property is unexpected\n' +
+        '    Property is unexpected\n' +
         '  c is invalid:\n' +
-        '    property is unexpected',
+        '    Property is unexpected',
       error => assert(error instanceof ValueObject.ValueObjectError)
     )
   })

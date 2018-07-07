@@ -22,7 +22,7 @@ describe('A defined ValueObject', () => {
         '  Expected: { id:string, seq:number, city:string, owner:string }\n' +
         '  Actual:   { seq:number, city:string, owner:string }\n' +
         '  id is invalid:\n' +
-        '    property is missing',
+        '    Property is missing',
       error => assert(error instanceof ValueObject.ValueObjectError)
     )
   })

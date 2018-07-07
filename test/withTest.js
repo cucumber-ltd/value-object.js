@@ -65,9 +65,9 @@ describe('ValueObject#with(newPropertyValues)', () => {
         '  Expected: { x:string }\n' +
         '  Actual:   { x:string, y:string, z:string }\n' +
         '  y is invalid:\n' +
-        '    property is unexpected\n' +
+        '    Property is unexpected\n' +
         '  z is invalid:\n' +
-        '    property is unexpected'
+        '    Property is unexpected'
     )
   })
 
