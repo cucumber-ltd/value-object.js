@@ -8,40 +8,91 @@ ValueObject.parseSchema = function(definition) {
   var properties = {}
   for (var propertyName in definition) {
     var metadata = {}
-    var declared = definition[propertyName]
-    var property = ValueObject.findPropertyType(declared.type ? declared.type : declared)
-    if (declared.type) {
-      var declaredKeys = keys(declared)
+    var declaration = definition[propertyName]
+    if (declaration.type) {
+      var declaredKeys = keys(declaration)
       for (var i = 0; i < declaredKeys.length; i++) {
         if (declaredKeys[i] !== 'type') {
-          metadata[declaredKeys[i]] = declared[declaredKeys[i]]
+          metadata[declaredKeys[i]] = declaration[declaredKeys[i]]
         }
       }
     }
-    property.metadata = metadata
-    properties[propertyName] = new Property(property, metadata)
+    var parsedDeclaration = this.parseDeclaration(declaration)
+    var constraintFactory = ValueObject.constraintFactoryForDeclaration(parsedDeclaration)
+    var constraint = constraintFactory()
+    properties[propertyName] = new Property(constraint, metadata, parsedDeclaration.optional)
   }
   return properties
 }
-ValueObject.findPropertyType = function(declared) {
-  if (typeof declared === 'string') {
-    var prop = ValueObject.propertyTypes[declared]
-    if (prop) return prop
-  } else if (Array.isArray(declared)) {
-    if (declared.length != 1) {
+ValueObject.parseDeclaration = function(declaration) {
+  var optional = false
+  if (declaration.declaration) {
+    optional = declaration.optional
+    declaration = declaration.declaration
+  }
+  var declaredType = declaration.type ? declaration.type : declaration
+  if (typeof declaredType === 'string' && declaredType.indexOf('?') === declaredType.length - 1) {
+    declaredType = declaredType.substring(0, declaredType.length - 1)
+    optional = true
+  }
+  return {
+    declaredType: declaredType,
+    optional: optional
+  }
+}
+ValueObject.constraintFactoryForDeclaration = function(parsedDeclaration) {
+  if (parsedDeclaration.optional) {
+    var parsedDeclaredType = ValueObject.parseDeclaration(parsedDeclaration.declaredType)
+    return function() {
+      return new OptionalConstraint(
+        ValueObject.constraintFactoryForDeclaration(parsedDeclaredType)()
+      )
+    }
+  }
+
+  var declaredType = parsedDeclaration.declaredType
+
+  if (Array.isArray(declaredType)) {
+    if (declaredType.length != 1) {
       throw new ValueObjectError('Expected array property definition with single type element')
     }
-    return new ArrayProp(ValueObject.findPropertyType(declared[0]))
-  } else if (declared === Array) {
-    return new UntypedArrayProp()
-  } else if (declared === Date) {
-    return new DateProp()
-  } else if (typeof declared === 'object') {
-    return new Schema(ValueObject.parseSchema(declared))
-  } else if (typeof declared === 'function') {
-    return new ConstructorProp(declared)
+    return function() {
+      var parsedElementDeclaration = ValueObject.parseDeclaration(declaredType[0])
+      var elementConstraintFactory = ValueObject.constraintFactoryForDeclaration(
+        parsedElementDeclaration
+      )
+      var elementConstraint = elementConstraintFactory()
+      return new ArrayOfConstraint(elementConstraint)
+    }
   }
-  var inspected = typeof declared === 'string' ? '"' + declared + '"' : declared
+  if (typeof declaredType === 'string') {
+    var factory = ValueObject.propertyFactories[declaredType]
+    if (factory) return factory
+  } else if (declaredType === Array) {
+    return function() {
+      return new UntypedArrayConstraint()
+    }
+  } else if (declaredType === Date) {
+    return function() {
+      return new DateConstraint()
+    }
+  } else if (typeof declaredType === 'object') {
+    return function() {
+      function Struct() {
+        ValueObject.apply(this, arguments)
+      }
+      Struct.prototype = Object.create(ValueObject.prototype)
+      Struct.schema = new Schema(ValueObject.parseSchema(declaredType))
+      Struct.isAnonymous = true
+      Struct.prototype.constructor = Struct
+      return new ConstructorConstraint(Struct)
+    }
+  } else if (typeof declaredType === 'function') {
+    return function() {
+      return new ConstructorConstraint(declaredType)
+    }
+  }
+  var inspected = typeof declaredType === 'string' ? '"' + declaredType + '"' : declaredType
   throw new ValueObjectError('Property defined as unsupported type (' + inspected + ')')
 }
 ValueObject.define = function(properties) {
@@ -60,7 +111,7 @@ ValueObject.define = function(properties) {
   })()
 }
 ValueObject.definePropertyType = function(name, definition) {
-  ValueObject.propertyTypes[name] = definition
+  ValueObject.propertyFactories[name] = definition
 }
 ValueObject.prototype.isEqualTo = function(other) {
   return this.constructor.schema.areEqual(this, other)
@@ -130,47 +181,47 @@ ValueObject.disableFreeze = function() {
 ValueObject.enableFreeze = function() {
   freeze = enabledFreeze
 }
+ValueObject.optional = function(declaration) {
+  return {
+    optional: true,
+    declaration: declaration
+  }
+}
 
-function Property(type, metadata) {
-  this.type = type
+function Property(constraint, metadata, optional) {
+  this.constraint = constraint
   this.metadata = metadata
-  if (type.toJSON) {
+  this.optional = !!optional
+  if (constraint.toJSON) {
     this.toJSON = function(args) {
-      return type.toJSON(args)
+      return constraint.toJSON(args)
     }
   }
-  if (type.toPlainObject) {
+  if (constraint.toPlainObject) {
     this.toPlainObject = function(args) {
-      return type.toPlainObject(args)
+      return constraint.toPlainObject(args)
     }
   }
 }
 Property.prototype.coerce = function(value, wasAssigned) {
-  if (!wasAssigned) {
-    return { failure: 'property is missing' }
+  if (!wasAssigned && !this.optional) {
+    return { failure: 'Property is missing' }
   }
-  return this.type.coerce(value)
+  if (this.optional && (value === undefined || value === null)) {
+    return { value: value }
+  }
+  return this.constraint.coerce(value)
 }
 Property.prototype.areEqual = function(x, y) {
-  return this.type.areEqual(x, y)
+  return this.constraint.areEqual(x, y)
 }
 Property.prototype.describe = function() {
-  return this.type.describe()
+  return this.constraint.describe()
 }
 
 function Schema(properties) {
   this.properties = properties
   this.propertyNames = keys(properties)
-  this.Constructor = this.createConstructor()
-}
-Schema.prototype.createConstructor = function() {
-  function Struct() {
-    ValueObject.apply(this, arguments)
-  }
-  Struct.prototype = Object.create(ValueObject.prototype)
-  Struct.schema = this
-  Struct.prototype.constructor = Struct
-  return Struct
 }
 Schema.prototype.extend = function(properties) {
   var newPropertyTypes = extend(this.properties, ValueObject.parseSchema(properties))
@@ -186,27 +237,17 @@ Schema.prototype.assignProperties = function(assignee, args) {
     }
   }
   var arg = args[0]
-  if (typeof arg !== 'object') {
-    return {
-      ctor: assignee.constructor,
-      expected: this.describeSignature(),
-      actual: this.describePropertyValues(arg),
-      failure: ['Expected object, was ' + this.describePropertyValues(arg)]
-    }
-  }
   delete arg.__type__
   var failures = this.findUnexpectedProperties(arg)
   for (var propertyName in this.properties) {
-    var coercionResult = this.properties[propertyName].coerce(
-      arg[propertyName],
-      propertyName in arg
-    )
+    var wasAssigned = propertyName in arg
+    var coercionResult = this.properties[propertyName].coerce(arg[propertyName], wasAssigned)
     if (coercionResult.failure) {
       failures.push({
         propertyName: propertyName,
         failure: coercionResult.failure
       })
-    } else {
+    } else if (wasAssigned) {
       assignee[propertyName] = coercionResult.value
     }
   }
@@ -227,7 +268,7 @@ Schema.prototype.findUnexpectedProperties = function(assignedProperties) {
   var unexpectedProperties = []
   for (var j in assignedProperties) {
     if (Object.prototype.hasOwnProperty.call(assignedProperties, j) && !this.properties[j])
-      unexpectedProperties.push({ propertyName: j, failure: 'property is unexpected' })
+      unexpectedProperties.push({ propertyName: j, failure: 'Property is unexpected' })
   }
   return unexpectedProperties
 }
@@ -239,34 +280,18 @@ Schema.prototype.describeSignature = function() {
   return '{ ' + signature.join(', ') + ' }'
 }
 Schema.prototype.describePropertyValues = function(values) {
-  switch (typeof values) {
-    case 'string':
-      return 'string value: "' + values + '"'
-    case 'object':
-      var signature = []
-      for (var propertyName in this.properties) {
-        if (propertyName in values) {
-          signature.push(propertyName + ':' + inspectType(values[propertyName]))
-        }
-      }
-      for (var valuePropertyName in values) {
-        if (!(valuePropertyName in this.properties)) {
-          signature.push(valuePropertyName + ':' + inspectType(values[valuePropertyName]))
-        }
-      }
-      return '{ ' + signature.join(', ') + ' }'
-    default:
-      return typeof values
+  var signature = []
+  for (var propertyName in this.properties) {
+    if (propertyName in values) {
+      signature.push(propertyName + ':' + inspectType(values[propertyName]))
+    }
   }
-}
-Schema.prototype.coerce = function(value) {
-  if (value === null) return { value: null }
-  var Constructor = this.Constructor
-  try {
-    return { value: new Constructor(value) }
-  } catch (e) {
-    return e
+  for (var valuePropertyName in values) {
+    if (!(valuePropertyName in this.properties)) {
+      signature.push(valuePropertyName + ':' + inspectType(values[valuePropertyName]))
+    }
   }
+  return '{ ' + signature.join(', ') + ' }'
 }
 Schema.prototype.areEqual = function(a, b) {
   if (a === null || b === null) {
@@ -285,7 +310,6 @@ Schema.prototype.areEqual = function(a, b) {
   return a.constructor === b.constructor
 }
 Schema.prototype.toPlainObject = function(instance) {
-  if (instance === null) return null
   var object = {}
   for (var propertyName in this.properties) {
     var property = this.properties[propertyName]
@@ -297,7 +321,6 @@ Schema.prototype.toPlainObject = function(instance) {
   return object
 }
 Schema.prototype.toJSON = function(instance) {
-  if (instance === null) return null
   var json = {}
   for (var propertyName in this.properties) {
     var property = this.properties[propertyName]
@@ -310,23 +333,20 @@ Schema.prototype.toJSON = function(instance) {
   if (instance.constructor.name) json.__type__ = instance.constructor.name
   return json
 }
-Schema.prototype.describe = function() {
-  return this.describeSignature()
-}
 
-function ArrayProp(elementType) {
-  this.elementType = elementType
+function ArrayOfConstraint(elementConstraint) {
+  this.elementConstraint = elementConstraint
 }
-ArrayProp.prototype.coerce = function(value) {
+ArrayOfConstraint.prototype.coerce = function(value) {
   if (value === null) return { value: null }
   if (!Array.isArray(value)) {
     return { failure: 'Expected array, was ' + inspectType(value) }
   }
-  var elementType = this.elementType
+  var elementConstraint = this.elementConstraint
   var failures = []
   var convertedValues = []
   for (var i = 0; i < value.length; i++) {
-    var coercionResult = elementType.coerce(value[i])
+    var coercionResult = elementConstraint.coerce(value[i])
     if (coercionResult.failure) {
       failures.push({
         propertyName: '[' + i + ']',
@@ -343,36 +363,36 @@ ArrayProp.prototype.coerce = function(value) {
   }
   return { value: convertedValues }
 }
-ArrayProp.prototype.areEqual = function(a, b) {
+ArrayOfConstraint.prototype.areEqual = function(a, b) {
   if (a.length != b.length) return false
   for (var i = 0; i < a.length; i++) {
-    if (!this.elementType.areEqual(a[i], b[i])) return false
+    if (!this.elementConstraint.areEqual(a[i], b[i])) return false
   }
   return true
 }
-ArrayProp.prototype.describe = function() {
-  return '[' + this.elementType.describe() + ']'
+ArrayOfConstraint.prototype.describe = function() {
+  return '[' + this.elementConstraint.describe() + ']'
 }
-ArrayProp.prototype.toJSON = function(instance) {
+ArrayOfConstraint.prototype.toJSON = function(instance) {
   if (instance === null) return null
-  var elementType = this.elementType
+  var elementConstraint = this.elementConstraint
   return instance.map(
-    typeof elementType.toJSON === 'function'
+    typeof elementConstraint.toJSON === 'function'
       ? function(element) {
-          return elementType.toJSON(element)
+          return elementConstraint.toJSON(element)
         }
       : function(element) {
           return element
         }
   )
 }
-ArrayProp.prototype.toPlainObject = function(instance) {
+ArrayOfConstraint.prototype.toPlainObject = function(instance) {
   if (instance === null) return null
-  var elementType = this.elementType
+  var elementConstraint = this.elementConstraint
   return instance.map(
-    typeof elementType.toPlainObject === 'function'
+    typeof elementConstraint.toPlainObject === 'function'
       ? function(element) {
-          return elementType.toPlainObject(element)
+          return elementConstraint.toPlainObject(element)
         }
       : function(element) {
           return element
@@ -380,15 +400,15 @@ ArrayProp.prototype.toPlainObject = function(instance) {
   )
 }
 
-function UntypedArrayProp() {}
-UntypedArrayProp.prototype.coerce = function(value) {
+function UntypedArrayConstraint() {}
+UntypedArrayConstraint.prototype.coerce = function(value) {
   if (value === null) return { value: null }
   if (!Array.isArray(value)) {
     return { failure: 'Expected array, was ' + inspectType(value) }
   }
   return { value: value }
 }
-UntypedArrayProp.prototype.areEqual = function(a, b) {
+UntypedArrayConstraint.prototype.areEqual = function(a, b) {
   if (a === null && b === null) return true
   if (a.length != b.length) return false
   for (var i = 0; i < a.length; i++) {
@@ -398,17 +418,17 @@ UntypedArrayProp.prototype.areEqual = function(a, b) {
   }
   return true
 }
-UntypedArrayProp.prototype.describe = function() {
+UntypedArrayConstraint.prototype.describe = function() {
   return 'Array'
 }
-UntypedArrayProp.prototype.toJSON = function(instance) {
+UntypedArrayConstraint.prototype.toJSON = function(instance) {
   return instance === null
     ? null
     : instance.map(function(element, index) {
         return typeof element.toJSON === 'function' ? element.toJSON(index) : element
       })
 }
-UntypedArrayProp.prototype.toPlainObject = function(instance) {
+UntypedArrayConstraint.prototype.toPlainObject = function(instance) {
   return instance === null
     ? null
     : instance.map(function(element) {
@@ -416,47 +436,56 @@ UntypedArrayProp.prototype.toPlainObject = function(instance) {
       })
 }
 
-function ConstructorProp(ctor) {
+function ConstructorConstraint(ctor) {
   this.ctor = ctor
+  if (this.ctor.schema) this.schema = this.ctor.schema
 }
-ConstructorProp.prototype.coerce = function(value) {
+ConstructorConstraint.prototype.coerce = function(value) {
   if (value === null) return { value: null }
-  var Constructor = this.ctor
-  if (!(value instanceof Constructor)) {
-    if (typeof Constructor.fromJSON === 'function') {
-      var properties = Constructor.fromJSON(value)
-      return { value: new Constructor(properties) }
+  try {
+    var Constructor = this.ctor
+    if (!(value instanceof Constructor)) {
+      if (typeof Constructor.fromJSON === 'function') {
+        var properties = Constructor.fromJSON(value)
+        return { value: new Constructor(properties) }
+      }
+      if (value && value.constructor === Object) {
+        return { value: new Constructor(value) }
+      }
+      return {
+        failure: 'Expected ' + functionName(Constructor) + ', was ' + inspectType(value)
+      }
     }
-    if (value && value.constructor === Object) {
-      return { value: new Constructor(value) }
-    }
-    return {
-      failure: 'Expected ' + functionName(Constructor) + ', was ' + inspectType(value)
-    }
+    return { value: value }
+  } catch (e) {
+    if (e.failure) return e
+    throw e
   }
-  return { value: value }
 }
-ConstructorProp.prototype.areEqual = function(a, b) {
-  return this.ctor.schema ? this.ctor.schema.areEqual(a, b) : a == b
+ConstructorConstraint.prototype.areEqual = function(a, b) {
+  return this.schema ? this.schema.areEqual(a, b) : a == b
 }
-ConstructorProp.prototype.describe = function() {
+ConstructorConstraint.prototype.describe = function() {
+  if (this.schema && this.ctor.isAnonymous) {
+    return this.schema.describeSignature()
+  }
   return functionName(this.ctor)
 }
-ConstructorProp.prototype.toJSON = function(instance) {
+ConstructorConstraint.prototype.toJSON = function(instance) {
   if (instance === null) return null
   return typeof instance.toJSON === 'function'
     ? instance.toJSON()
     : JSON.parse(JSON.stringify(instance))
 }
-ConstructorProp.prototype.toPlainObject = function(instance) {
+ConstructorConstraint.prototype.toPlainObject = function(instance) {
   if (instance === null) return null
   return typeof instance.toPlainObject === 'function'
     ? instance.toPlainObject()
     : JSON.parse(JSON.stringify(instance))
 }
 
-function DateProp() {}
-DateProp.prototype.coerce = function(value) {
+function DateConstraint() {}
+DateConstraint.prototype.coerce = function(value) {
   if (value === null) return { value: null }
   var date
   if (value instanceof Date) {
@@ -471,10 +500,10 @@ DateProp.prototype.coerce = function(value) {
   }
   return { value: date }
 }
-DateProp.prototype.areEqual = function(a, b) {
+DateConstraint.prototype.areEqual = function(a, b) {
   return a.getTime() == b.getTime()
 }
-DateProp.prototype.describe = function() {
+DateConstraint.prototype.describe = function() {
   return 'Date'
 }
 
@@ -494,31 +523,56 @@ Primitive.prototype.describe = function() {
   return this.name
 }
 
-function ObjectProp() {
+function ObjectConstraint() {
   Primitive.call(this, Object, 'object')
 }
-ObjectProp.prototype = new Primitive(Object, 'object')
-ObjectProp.prototype.areEqual = function(a, b) {
+ObjectConstraint.prototype = new Primitive(Object, 'object')
+ObjectConstraint.prototype.areEqual = function(a, b) {
   return JSON.stringify(a) === JSON.stringify(b)
 }
 
-function AnyProp() {}
-AnyProp.prototype.coerce = function(value) {
+function AnyConstraint() {}
+AnyConstraint.prototype.coerce = function(value) {
   return { value: value }
 }
-AnyProp.prototype.areEqual = function(a, b) {
+AnyConstraint.prototype.areEqual = function(a, b) {
   return a == b
 }
-AnyProp.prototype.describe = function() {
+AnyConstraint.prototype.describe = function() {
   return 'any'
 }
 
-ValueObject.propertyTypes = {
-  string: new Primitive(String, 'string'),
-  number: new Primitive(Number, 'number'),
-  boolean: new Primitive(Boolean, 'boolean'),
-  object: new ObjectProp(),
-  any: new AnyProp()
+function OptionalConstraint(constraint) {
+  this.constraint = constraint
+  this.optional = true
+}
+OptionalConstraint.prototype.coerce = function(value) {
+  if (typeof value === 'undefined') return { value: undefined }
+  return this.constraint.coerce(value)
+}
+OptionalConstraint.prototype.areEqual = function(a, b) {
+  return this.constraint.areEqual(a, b)
+}
+OptionalConstraint.prototype.describe = function() {
+  return this.constraint.describe() + '?'
+}
+
+ValueObject.propertyFactories = {
+  string: function() {
+    return new Primitive(String, 'string')
+  },
+  number: function() {
+    return new Primitive(Number, 'number')
+  },
+  boolean: function() {
+    return new Primitive(Boolean, 'boolean')
+  },
+  object: function() {
+    return new ObjectConstraint()
+  },
+  any: function() {
+    return new AnyConstraint()
+  }
 }
 
 function ValidationFailures() {
