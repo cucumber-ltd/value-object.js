@@ -68,6 +68,14 @@ describe("A 'string?' property", () => {
         '    Expected string, was number'
     )
   })
+
+  it('can be converted to a plain object, even with an undefined value', () => {
+    const Thing = ValueObject.define({
+      optionalProp: 'string?'
+    })
+    const thing = new Thing({ optionalProp: undefined })
+    assert.deepEqual(thing.toPlainObject(), {})
+  })
 })
 
 describe("A 'number?' property", () => {
