@@ -317,7 +317,7 @@ Schema.prototype.toPlainObject = function(instance) {
       object[propertyName] =
         typeof property.toPlainObject === 'function'
           ? property.toPlainObject(instance[propertyName])
-          : JSON.parse(JSON.stringify(instance[propertyName]))
+          : instance[propertyName]
     }
   }
   return object
@@ -484,7 +484,7 @@ ConstructorConstraint.prototype.toPlainObject = function(instance) {
   if (instance === null) return null
   return typeof instance.toPlainObject === 'function'
     ? instance.toPlainObject()
-    : JSON.parse(JSON.stringify(instance))
+    : instance
 }
 
 function DateConstraint() {}

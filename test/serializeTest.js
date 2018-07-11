@@ -261,7 +261,7 @@ describe('#toPlainObject()', () => {
     assert.strictEqual(x.y[0], 'yeah')
   })
 
-  it('does not call the constructor when fromJSON returns an instance of the constructor', () => {
+  it.only('does not call the constructor when fromJSON returns an instance of the constructor', () => {
     let calls = 0
     function LocalDate(parts) {
       this.parts = parts
@@ -286,5 +286,38 @@ describe('#toPlainObject()', () => {
     var rehydratedBooking = new Booking(plainBooking)
     assert(rehydratedBooking.arrival.date instanceof LocalDate)
     assert.equal(calls, 2)
+  })
+
+  it('leaves object values intact (does not attemtp to serialize them)', function() {
+    class A {
+      constructor (p) {
+        this.p = p
+      }
+      toJSON() {
+        return 'Aaa'
+      }
+    }
+    class X extends ValueObject.define({
+      y1: A,
+      y2: [A],
+      y3: [{z3: A}],
+      y4: [{z4: [A]}],
+      y5: {z5: A}
+    }) {}
+    const x = new X({
+      y1: new A('p1'),
+      y2: [new A('p2')],
+      y3: [{z3: new A('p3')}],
+      y4: [{z4: [new A('p4')]}],
+      y5: {z5: new A('p5')}
+    })
+    const plain = x.toPlainObject()
+    assert.deepEqual(plain, {
+      y1: {p: 'p1'},
+      y2: [{p: 'p2'}],
+      y3: [{z3: {p: 'p3'}}],
+      y4: [{z4: [{p: 'p4'}]}],
+      y5: {z5: {p: 'p5'}}
+    })
   })
 })
