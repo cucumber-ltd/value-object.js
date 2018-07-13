@@ -26,6 +26,33 @@ describe('ValueObject#toJSON()', () => {
       bar: { __type__: 'Bar', baz: 'yeah' }
     })
   })
+
+  it('does not call the constructor when fromJSON returns an instance of the constructor', () => {
+    let calls = 0
+    function LocalDate(parts) {
+      this.parts = parts
+      calls++
+    }
+    LocalDate.prototype.toJSON = function() {
+      return this.parts.join('-')
+    }
+    LocalDate.fromJSON = function(string) {
+      return new LocalDate(string.split('-'))
+    }
+
+    var Booking = ValueObject.define({
+      arrival: { date: LocalDate }
+    })
+
+    var jsonBooking = new Booking({
+      arrival: { date: '2018-12-12' }
+    }).toJSON()
+
+    assert.equal(calls, 1)
+    var rehydratedBooking = new Booking(jsonBooking)
+    assert(rehydratedBooking.arrival.date instanceof LocalDate)
+    assert.equal(calls, 2)
+  })
 })
 
 describe('ValueObject.deserializeForNamespaces([ { TypeA }, { TypeB } ])', () => {
@@ -232,5 +259,32 @@ describe('#toPlainObject()', () => {
     assert.strictEqual(plain.y[0], 'yeah')
     plain.y[0] = 'no'
     assert.strictEqual(x.y[0], 'yeah')
+  })
+
+  it('does not call the constructor when fromJSON returns an instance of the constructor', () => {
+    let calls = 0
+    function LocalDate(parts) {
+      this.parts = parts
+      calls++
+    }
+    LocalDate.prototype.toJSON = function() {
+      return this.parts.join('-')
+    }
+    LocalDate.fromJSON = function(string) {
+      return new LocalDate(string.split('-'))
+    }
+
+    var Booking = ValueObject.define({
+      arrival: { date: LocalDate }
+    })
+
+    var plainBooking = new Booking({
+      arrival: { date: '2018-12-12' }
+    }).toPlainObject()
+
+    assert.equal(calls, 1)
+    var rehydratedBooking = new Booking(plainBooking)
+    assert(rehydratedBooking.arrival.date instanceof LocalDate)
+    assert.equal(calls, 2)
   })
 })
