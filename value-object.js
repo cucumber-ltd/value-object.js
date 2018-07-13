@@ -1,3 +1,5 @@
+const clone = require('clone')
+
 function ValueObject() {
   var failedAssignment = this.constructor.schema.assignProperties(this, arguments)
   if (failedAssignment) {
@@ -317,7 +319,7 @@ Schema.prototype.toPlainObject = function(instance) {
       object[propertyName] =
         typeof property.toPlainObject === 'function'
           ? property.toPlainObject(instance[propertyName])
-          : instance[propertyName]
+          : clone(instance[propertyName])
     }
   }
   return object
@@ -484,7 +486,7 @@ ConstructorConstraint.prototype.toPlainObject = function(instance) {
   if (instance === null) return null
   return typeof instance.toPlainObject === 'function'
     ? instance.toPlainObject()
-    : instance
+    : clone(instance)
 }
 
 function DateConstraint() {}

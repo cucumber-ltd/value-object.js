@@ -302,14 +302,18 @@ describe('#toPlainObject()', () => {
       y2: [A],
       y3: [{z3: A}],
       y4: [{z4: [A]}],
-      y5: {z5: A}
+      y5: {z5: A},
+      y6: {z6: Date}
     }) {}
+    const y1 = new A('p1')
+    const date = new Date()
     const x = new X({
-      y1: new A('p1'),
+      y1,
       y2: [new A('p2')],
       y3: [{z3: new A('p3')}],
       y4: [{z4: [new A('p4')]}],
-      y5: {z5: new A('p5')}
+      y5: {z5: new A('p5')},
+      y6: {z6: date}
     })
     const plain = x.toPlainObject()
     assert.deepEqual(plain, {
@@ -317,7 +321,10 @@ describe('#toPlainObject()', () => {
       y2: [{p: 'p2'}],
       y3: [{z3: {p: 'p3'}}],
       y4: [{z4: [{p: 'p4'}]}],
-      y5: {z5: {p: 'p5'}}
+      y5: {z5: {p: 'p5'}},
+      y6: {z6: date}
     })
+    assert.notStrictEqual(plain.y1, y1)
+    assert.notStrictEqual(plain.y6.z6, date)
   })
 })
