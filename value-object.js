@@ -1,4 +1,6 @@
-const clone = require('clone')
+function clone(thing) {
+  return JSON.parse(JSON.stringify(thing))
+}
 
 function ValueObject() {
   var failedAssignment = this.constructor.schema.assignProperties(this, arguments)
@@ -134,8 +136,9 @@ ValueObject.prototype.with = function(newPropertyValues) {
 ValueObject.prototype.toJSON = function() {
   return this.constructor.schema.toJSON(this)
 }
-ValueObject.prototype.toPlainObject = function() {
-  return this.constructor.schema.toPlainObject(this)
+ValueObject.prototype.toPlainObject = function(cloneFn) {
+  cloneFn = cloneFn || clone
+  return this.constructor.schema.toPlainObject(this, cloneFn)
 }
 ValueObject.prototype.validate = function() {
   var failures = new ValidationFailures()
@@ -200,8 +203,8 @@ function Property(constraint, metadata, optional) {
     }
   }
   if (constraint.toPlainObject) {
-    this.toPlainObject = function(args) {
-      return constraint.toPlainObject(args)
+    this.toPlainObject = function(args, cloneFn) {
+      return constraint.toPlainObject(args, cloneFn)
     }
   }
 }
@@ -311,15 +314,15 @@ Schema.prototype.areEqual = function(a, b) {
   }
   return a.constructor === b.constructor
 }
-Schema.prototype.toPlainObject = function(instance) {
+Schema.prototype.toPlainObject = function(instance, cloneFn) {
   var object = {}
   for (var propertyName in this.properties) {
     var property = this.properties[propertyName]
     if (typeof instance[propertyName] !== 'undefined') {
       object[propertyName] =
         typeof property.toPlainObject === 'function'
-          ? property.toPlainObject(instance[propertyName])
-          : clone(instance[propertyName])
+          ? property.toPlainObject(instance[propertyName], cloneFn)
+          : cloneFn(instance[propertyName])
     }
   }
   return object
@@ -390,13 +393,13 @@ ArrayOfConstraint.prototype.toJSON = function(instance) {
         }
   )
 }
-ArrayOfConstraint.prototype.toPlainObject = function(instance) {
+ArrayOfConstraint.prototype.toPlainObject = function(instance, cloneFn) {
   if (instance === null) return null
   var elementConstraint = this.elementConstraint
   return instance.map(
     typeof elementConstraint.toPlainObject === 'function'
       ? function(element) {
-          return elementConstraint.toPlainObject(element)
+          return elementConstraint.toPlainObject(element, cloneFn)
         }
       : function(element) {
           return element
@@ -432,11 +435,11 @@ UntypedArrayConstraint.prototype.toJSON = function(instance) {
         return typeof element.toJSON === 'function' ? element.toJSON(index) : element
       })
 }
-UntypedArrayConstraint.prototype.toPlainObject = function(instance) {
+UntypedArrayConstraint.prototype.toPlainObject = function(instance, cloneFn) {
   return instance === null
     ? null
     : instance.map(function(element) {
-        return typeof element.toPlainObject === 'function' ? element.toPlainObject() : element
+        return typeof element.toPlainObject === 'function' ? element.toPlainObject(cloneFn) : cloneFn(element)
       })
 }
 
@@ -482,11 +485,11 @@ ConstructorConstraint.prototype.toJSON = function(instance) {
     ? instance.toJSON()
     : JSON.parse(JSON.stringify(instance))
 }
-ConstructorConstraint.prototype.toPlainObject = function(instance) {
+ConstructorConstraint.prototype.toPlainObject = function(instance, cloneFn) {
   if (instance === null) return null
   return typeof instance.toPlainObject === 'function'
-    ? instance.toPlainObject()
-    : clone(instance)
+    ? instance.toPlainObject(cloneFn)
+    : cloneFn(instance)
 }
 
 function DateConstraint() {}
