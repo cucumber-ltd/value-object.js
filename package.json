@@ -8,14 +8,17 @@
     "eslint": "eslint src test",
     "mocha": "mocha",
     "karma": "karma start --browsers Firefox,Chrome --single-run",
-    "coverage":
-      "node --harmony ./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha -- test"
+    "coverage": "node --harmony ./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha -- test"
   },
   "repository": {
     "type": "git",
     "url": "git://github.com/cucumber-ltd/value-object.js.git"
   },
-  "keywords": ["value", "object", "struct"],
+  "keywords": [
+    "value",
+    "object",
+    "struct"
+  ],
   "author": "Cucumber Limited <cukes@googlegroups.com>",
   "license": "MIT",
   "bugs": {
@@ -27,6 +30,7 @@
     "@babel/preset-env": "^7.0.0-beta.40",
     "benchmark": "^2.1.4",
     "browserify": "^16.1.0",
+    "clone": "^2.1.1",
     "es6-error": "^4.1.1",
     "eslint": "^4.19.1",
     "eslint-config-eslint": "^4.0.0",
@@ -44,5 +48,7 @@
     "prettier": "^1.12.1",
     "watchify": "^3.10.0"
   },
-  "files": ["*"]
+  "files": [
+    "*"
+  ]
 }

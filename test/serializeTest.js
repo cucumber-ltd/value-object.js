@@ -2,6 +2,7 @@
 'use strict'
 
 const assert = require('assert')
+const clone = require('clone')
 const assertThrows = require('./assertThrows')
 const ValueObject = require('..')
 
@@ -286,5 +287,80 @@ describe('#toPlainObject()', () => {
     var rehydratedBooking = new Booking(plainBooking)
     assert(rehydratedBooking.arrival.date instanceof LocalDate)
     assert.equal(calls, 2)
+  })
+
+  it('can leave object values intact (does not attemtp to serialize them)', function() {
+    class A {
+      constructor (p) {
+        this.p = p
+      }
+      toJSON() {
+        return 'Aaa'
+      }
+    }
+    class Y extends ValueObject.define({
+      o: A
+    }) {}
+    class X extends ValueObject.define({
+      y1: A,
+      y2: [A],
+      y3: [{z3: A}],
+      y4: [{z4: [A]}],
+      y5: {z5: A},
+      y6: {z6: Date},
+      y7: Array,
+      y8: Array,
+      y9: Y,
+      y10: [Y]
+    }) {}
+    const y1 = new A('p1')
+    const date = new Date()
+    const vo = new Y({o: y1})
+    const x = new X({
+      y1,
+      y2: [y1],
+      y3: [{z3: new A('p3')}],
+      y4: [{z4: [new A('p4')]}],
+      y5: {z5: new A('p5')},
+      y6: {z6: date},
+      y7: [y1],
+      y8: [vo],
+      y9: vo,
+      y10: [vo],
+    })
+    const plain = x.toPlainObject(clone)
+    assert.deepEqual(plain, {
+      y1: {p: 'p1'},
+      y2: [{p: 'p1'}],
+      y3: [{z3: {p: 'p3'}}],
+      y4: [{z4: [{p: 'p4'}]}],
+      y5: {z5: {p: 'p5'}},
+      y6: {z6: date},
+      y7: [{p: 'p1'}],
+      y8: [{o: {p: 'p1'}}],
+      y9: {o: {p: 'p1'}},
+      y10: [{o: {p: 'p1'}}]
+    })
+
+    assert.deepEqual(plain.y1, y1)
+    assert.notStrictEqual(plain.y1, y1)
+
+    assert.deepEqual(plain.y2[0], y1)
+    assert.notStrictEqual(plain.y2[0], y1)
+
+    assert.deepEqual(plain.y6.z6, date)
+    assert.notStrictEqual(plain.y6.z6, date)
+
+    assert.deepEqual(plain.y7[0], y1)
+    assert.notStrictEqual(plain.y7[0], y1)
+
+    assert.deepEqual(plain.y8[0], vo)
+    assert.notStrictEqual(plain.y8[0], vo)
+
+    assert.deepEqual(plain.y9, vo)
+    assert.notStrictEqual(plain.y9, vo)
+
+    assert.deepEqual(plain.y10[0], vo)
+    assert.notStrictEqual(plain.y10[0], vo)
   })
 })
