@@ -342,6 +342,15 @@ property values:
 { "code": "GBP", "name": "British Pounds" }
 ```
 
+Any value-object instances will be converted using their schemas. Any objects
+that are not value-object instances will be cloned using
+`JSON.parse(JSON.stringify(object))` by default. Pass in an optional `clone`
+function to override this behaviour:
+
+```js
+valueObject.toPlainObject(fancyDeepCloneFunction)
+```
+
 ## Converting value objects to JSON
 
 Use `toJSON()` to create an object with `__type__` properties for subsequent
