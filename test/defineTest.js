@@ -14,18 +14,16 @@ describe('.define(definition)', () => {
 
   it('defines types with property metadata', () => {
     const Thing = ValueObject.define({
-      foo: {
-        type: 'string',
+      foo: ValueObject.property('string', {
         description: 'the foo',
         flavour: 'spicy',
         spicy: true,
         yummy: false
-      },
-      bar: {
-        type: 'string',
+      }),
+      bar: ValueObject.property('string', {
         description: 'the bar',
         flavour: 'sweet'
-      }
+      })
     })
     assert.deepEqual(
       { description: 'the foo', flavour: 'spicy', spicy: true, yummy: false },
@@ -38,7 +36,7 @@ describe('.define(definition)', () => {
   })
 
   it('defines types with typed arrays with property metadata', () => {
-    const Foo = ValueObject.define({ zzz: { type: 'string', blah: 'yeah' } })
+    const Foo = ValueObject.define({ zzz: ValueObject.property('string', { blah: 'yeah' }) })
     const Thing = ValueObject.define({
       foo: [Foo]
     })
@@ -50,7 +48,7 @@ describe('.define(definition)', () => {
 
   it('defines types with typed arrays with inline types with property metadata', () => {
     const Thing = ValueObject.define({
-      foo: [{ zzz: { type: 'string', blah: 'yeah' } }]
+      foo: [{ zzz: ValueObject.property('string', { blah: 'yeah' }) }]
     })
     assert.deepEqual(
       { blah: 'yeah' },

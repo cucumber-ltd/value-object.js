@@ -301,11 +301,10 @@ properties and arbitrary metadata associated with each property:
 ```js
 class Product extends ValueObject.define({
   name: 'string',
-  stockLevel: {
-    type: 'number',
+  stockLevel: ValueObject.property('number', {
     default: 0,
     description: 'units in stock'
-  }
+  })
 }) {}
 
 > Product.schema.properties.stockLevel

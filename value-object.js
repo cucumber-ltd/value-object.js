@@ -8,23 +8,19 @@ function ValueObject() {
     throw new ValueObjectError(failedAssignment)
   }
 }
+ValueObject.property = function(declaration, metadata) {
+  var parsedDeclaration = this.parseDeclaration(declaration)
+  var constraintFactory = ValueObject.constraintFactoryForDeclaration(parsedDeclaration)
+  var constraint = constraintFactory()
+  return new Property(constraint, metadata, parsedDeclaration.optional)
+}
 ValueObject.parseSchema = function(definition) {
   var properties = {}
   for (var propertyName in definition) {
-    var metadata = {}
-    var declaration = definition[propertyName]
-    if (declaration.type) {
-      var declaredKeys = keys(declaration)
-      for (var i = 0; i < declaredKeys.length; i++) {
-        if (declaredKeys[i] !== 'type') {
-          metadata[declaredKeys[i]] = declaration[declaredKeys[i]]
-        }
-      }
-    }
-    var parsedDeclaration = this.parseDeclaration(declaration)
-    var constraintFactory = ValueObject.constraintFactoryForDeclaration(parsedDeclaration)
-    var constraint = constraintFactory()
-    properties[propertyName] = new Property(constraint, metadata, parsedDeclaration.optional)
+    properties[propertyName] =
+      definition[propertyName] instanceof Property
+        ? definition[propertyName]
+        : ValueObject.property(definition[propertyName], {})
   }
   return properties
 }
@@ -439,7 +435,9 @@ UntypedArrayConstraint.prototype.toPlainObject = function(instance, cloneFn) {
   return instance === null
     ? null
     : instance.map(function(element) {
-        return typeof element.toPlainObject === 'function' ? element.toPlainObject(cloneFn) : cloneFn(element)
+        return typeof element.toPlainObject === 'function'
+          ? element.toPlainObject(cloneFn)
+          : cloneFn(element)
       })
 }
 
