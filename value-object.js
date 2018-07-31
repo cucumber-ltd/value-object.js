@@ -439,7 +439,9 @@ UntypedArrayConstraint.prototype.toPlainObject = function(instance, cloneFn) {
   return instance === null
     ? null
     : instance.map(function(element) {
-        return typeof element.toPlainObject === 'function' ? element.toPlainObject(cloneFn) : cloneFn(element)
+        return typeof element.toPlainObject === 'function'
+          ? element.toPlainObject(cloneFn)
+          : cloneFn(element)
       })
 }
 
@@ -454,7 +456,7 @@ ConstructorConstraint.prototype.coerce = function(value) {
     if (!(value instanceof Constructor)) {
       if (typeof Constructor.fromJSON === 'function') {
         var properties = Constructor.fromJSON(value)
-        if (properties.constructor === Constructor) return { value: properties }
+        if (properties instanceof Constructor) return { value: properties }
         return { value: new Constructor(properties) }
       }
       if (value && value.constructor === Object) {

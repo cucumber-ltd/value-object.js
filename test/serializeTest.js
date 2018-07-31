@@ -56,6 +56,28 @@ describe('ValueObject#toJSON()', () => {
   })
 })
 
+describe('ValueObject.fromJSON', () => {
+  it('can return subclasses of the constructor', () => {
+    class SubscriptionState extends ValueObject.define({}) {
+      static fromJSON() {
+        return new Active({})
+      }
+    }
+
+    class Active extends SubscriptionState {}
+
+    const Subscription = ValueObject.define({
+      state: SubscriptionState
+    })
+
+    const newSubscription = new Subscription({
+      state: {}
+    })
+
+    assert.equal(newSubscription.state.constructor, Active)
+  })
+})
+
 describe('ValueObject.deserializeForNamespaces([ { TypeA }, { TypeB } ])', () => {
   it('deserializes types in strings created with JSON.stringify', () => {
     class Foo extends ValueObject.define({ x: 'number', y: 'string' }) {}
@@ -291,7 +313,7 @@ describe('#toPlainObject()', () => {
 
   it('can leave object values intact (does not attemtp to serialize them)', function() {
     class A {
-      constructor (p) {
+      constructor(p) {
         this.p = p
       }
       toJSON() {
@@ -304,10 +326,10 @@ describe('#toPlainObject()', () => {
     class X extends ValueObject.define({
       y1: A,
       y2: [A],
-      y3: [{z3: A}],
-      y4: [{z4: [A]}],
-      y5: {z5: A},
-      y6: {z6: Date},
+      y3: [{ z3: A }],
+      y4: [{ z4: [A] }],
+      y5: { z5: A },
+      y6: { z6: Date },
       y7: Array,
       y8: Array,
       y9: Y,
@@ -315,31 +337,31 @@ describe('#toPlainObject()', () => {
     }) {}
     const y1 = new A('p1')
     const date = new Date()
-    const vo = new Y({o: y1})
+    const vo = new Y({ o: y1 })
     const x = new X({
       y1,
       y2: [y1],
-      y3: [{z3: new A('p3')}],
-      y4: [{z4: [new A('p4')]}],
-      y5: {z5: new A('p5')},
-      y6: {z6: date},
+      y3: [{ z3: new A('p3') }],
+      y4: [{ z4: [new A('p4')] }],
+      y5: { z5: new A('p5') },
+      y6: { z6: date },
       y7: [y1],
       y8: [vo],
       y9: vo,
-      y10: [vo],
+      y10: [vo]
     })
     const plain = x.toPlainObject(clone)
     assert.deepEqual(plain, {
-      y1: {p: 'p1'},
-      y2: [{p: 'p1'}],
-      y3: [{z3: {p: 'p3'}}],
-      y4: [{z4: [{p: 'p4'}]}],
-      y5: {z5: {p: 'p5'}},
-      y6: {z6: date},
-      y7: [{p: 'p1'}],
-      y8: [{o: {p: 'p1'}}],
-      y9: {o: {p: 'p1'}},
-      y10: [{o: {p: 'p1'}}]
+      y1: { p: 'p1' },
+      y2: [{ p: 'p1' }],
+      y3: [{ z3: { p: 'p3' } }],
+      y4: [{ z4: [{ p: 'p4' }] }],
+      y5: { z5: { p: 'p5' } },
+      y6: { z6: date },
+      y7: [{ p: 'p1' }],
+      y8: [{ o: { p: 'p1' } }],
+      y9: { o: { p: 'p1' } },
+      y10: [{ o: { p: 'p1' } }]
     })
 
     assert.deepEqual(plain.y1, y1)
