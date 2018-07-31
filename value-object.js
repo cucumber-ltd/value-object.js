@@ -452,7 +452,7 @@ ConstructorConstraint.prototype.coerce = function(value) {
     if (!(value instanceof Constructor)) {
       if (typeof Constructor.fromJSON === 'function') {
         var properties = Constructor.fromJSON(value)
-        if (properties.constructor === Constructor) return { value: properties }
+        if (properties instanceof Constructor) return { value: properties }
         return { value: new Constructor(properties) }
       }
       if (value && value.constructor === Object) {
