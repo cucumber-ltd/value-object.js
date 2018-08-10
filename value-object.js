@@ -451,9 +451,9 @@ ConstructorConstraint.prototype.coerce = function(value) {
     var Constructor = this.ctor
     if (!(value instanceof Constructor)) {
       if (typeof Constructor.fromJSON === 'function') {
-        var properties = Constructor.fromJSON(value)
-        if (properties instanceof Constructor) return { value: properties }
-        return { value: new Constructor(properties) }
+        var fromJSON = Constructor.fromJSON(value)
+        if (fromJSON === null || fromJSON instanceof Constructor) return { value: fromJSON }
+        return { value: new Constructor(fromJSON) }
       }
       if (value && value.constructor === Object) {
         return { value: new Constructor(value) }

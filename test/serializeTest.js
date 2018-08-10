@@ -76,6 +76,19 @@ describe('ValueObject.fromJSON', () => {
 
     assert.equal(newSubscription.state.constructor, Active)
   })
+
+  it('can return null', () => {
+    class Bar extends ValueObject.define({}) {
+      static fromJSON() {
+        return null
+      }
+    }
+    class Foo extends ValueObject.define({
+      prop: Bar
+    }) {}
+    const foo = new Foo({ prop: '' })
+    assert.strictEqual(foo.prop, null)
+  })
 })
 
 describe('ValueObject.deserializeForNamespaces([ { TypeA }, { TypeB } ])', () => {
@@ -311,7 +324,7 @@ describe('#toPlainObject()', () => {
     assert.equal(calls, 2)
   })
 
-  it('can leave object values intact (does not attemtp to serialize them)', function() {
+  it('can leave object values intact (does not attempt to serialize them)', function() {
     class A {
       constructor(p) {
         this.p = p
