@@ -149,7 +149,7 @@ class Manager extends ValueObject.define({
 
 ## Optional properties
 
-Properties declared with `?` can be set to `null` or `undedined`, or omitted
+Properties declared with `?` can be set to `null` or `undefined`, or omitted
 altogether:
 
 ```js
