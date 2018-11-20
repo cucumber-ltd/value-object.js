@@ -238,6 +238,20 @@ describe('#toPlainObject()', () => {
     assert.equal(JSON.stringify(y.toPlainObject()), '{"b":[{"a":1},null],"c":[{"d":null}]}')
   })
 
+  it('calls toPlainObject() on any objects it finds', () => {
+    class X extends ValueObject.define({ a: 'number' }) {
+      toPlainObject() {
+        return 'YO'
+      }
+    }
+    class Y extends ValueObject.define({ b: [X], c: { e: X } }) {}
+    class Z extends ValueObject.define({ d: [Y] }) {}
+
+    const z = new Z({ d: [new Y({ b: [new X({ a: 123 })], c: { e: new X({ a: 456 }) } })] })
+
+    assert.equal(JSON.stringify(z.toPlainObject()), '{"d":[{"b":["YO"],"c":{"e":"YO"}}]}')
+  })
+
   it('converts untyped array properties', () => {
     class X extends ValueObject.define({ a: Array, b: Array }) {}
 

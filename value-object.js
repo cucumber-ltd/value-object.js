@@ -465,7 +465,9 @@ ConstructorConstraint.prototype.coerce = function(value) {
     return { value: value }
   } catch (e) {
     if (e.failure) return e
-    throw e
+    return {
+      failure: Constructor.name + ' could not be instantiated:\n' + e.stack + '\n'
+    }
   }
 }
 ConstructorConstraint.prototype.areEqual = function(a, b) {
@@ -714,7 +716,10 @@ function describeInvalidPropertyValues(invalidPropertyValues, indent) {
       indent +
       invalidPropertyValues.propertyName +
       ' is invalid:\n' +
-      describeInvalidPropertyValues(invalidPropertyValues.failure, indent + '  ')
+      describeInvalidPropertyValues(
+        indentLines(invalidPropertyValues.failure, indent),
+        indent + '  '
+      )
     )
   }
 
@@ -739,6 +744,16 @@ function describeInvalidPropertyValues(invalidPropertyValues, indent) {
           })
           .join('\n')
     : typeExplanation
+}
+
+function indentLines(string, indent) {
+  if (!string.split) return string
+  var lines = string.split('\n')
+  return lines
+    .map(function(line, i) {
+      return i === 0 ? line : indent + '  ' + line
+    })
+    .join('\n')
 }
 
 function disabledFreeze() {}
