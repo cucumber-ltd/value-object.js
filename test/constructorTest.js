@@ -173,15 +173,38 @@ describe('ValueObject#constructor(properties)', () => {
   })
 
   it('fails when instantiated with constructor properties whose constructors throw', () => {
-    const constructorError = new Error('oh noes')
-    class Bad extends ValueObject.define({ x: 'string' }) {
+    function whoopsie(message) {
+      throw new Error(message)
+    }
+    class Bad1 extends ValueObject.define({ x: 'string' }) {
       constructor() {
-        throw constructorError
+        whoopsie('error building Bad1')
+        super()
       }
     }
-    class HasBadProps extends ValueObject.define({ a: Bad, b: Bad }) {}
-    assertThrows(() => new HasBadProps({ a: {}, b: {} }), constructorError.message, error =>
-      assert.equal(error, constructorError)
+    class Bad2 {
+      constructor() {
+        whoopsie('error building Bad2')
+      }
+    }
+    class HasBadProps extends ValueObject.define({ a: Bad1, b: [Bad2] }) {}
+    const expectedMessage = new RegExp(
+      [
+        'a is invalid:',
+        'Bad1 could not be instantiated:',
+        'Error: error building Bad1',
+        'at whoopsie',
+        'at new Bad1',
+        'b is invalid:',
+        '\\[0\\] is invalid:',
+        'Bad2 could not be instantiated:',
+        'Error: error building Bad2',
+        'at whoopsie',
+        'at new Bad2'
+      ].join('[\\s\\S]*')
+    )
+    assertThrows(() => new HasBadProps({ a: {}, b: [{}] }), expectedMessage, error =>
+      assert(error instanceof ValueObject.ValueObjectError)
     )
   })
 
