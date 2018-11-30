@@ -1,6 +1,6 @@
 {
   "name": "value-object",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "value-object.js - simple value objects",
   "main": "value-object.js",
   "scripts": {
@@ -49,6 +49,6 @@
     "watchify": "^3.10.0"
   },
   "files": [
-    "*"
+    "value-object.js"
   ]
 }
